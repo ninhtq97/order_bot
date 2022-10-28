@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon app.js"
+    "start": "nodemon app.js --ignore ./*.json"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +13,8 @@
     "nodemon": "^2.0.20"
   },
   "dependencies": {
+    "cron": "^2.1.0",
+    "date-fns": "^2.29.3",
     "node-telegram-bot-api": "^0.59.0"
   }
 }
