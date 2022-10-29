@@ -2,89 +2,110 @@ const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs/promises');
 const { constants } = require('fs/promises');
 const { format } = require('date-fns');
+const {
+  KEY,
+  REGEXP,
+  BOT_TOKEN,
+  GROUP_ORDER_ID,
+  FILE_PATHS,
+  INIT_DATA,
+  REGEXP_REPLACE,
+  REGEX_CALLBACK,
+  DIR_PATHS,
+} = require('./constants');
+const {
+  getKeyboardOrders,
+  updateOrders,
+  getData,
+  getKeyboardPayeeMembers,
+} = require('./utils');
 const CronJob = require('cron').CronJob;
 
-const group_t12_id = -886441272;
-const token = '5716072961:AAGwX7iqdX-o_BIrZCK4J_qmiQipx2CtA50';
-
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
 bot.setMyCommands([
-  // { command: 'weather', description: 'weather' },
-  // { command: 'sticker', description: 'sticker' },
-  // { command: 'location', description: 'location' },
-  // { command: 'music', description: 'music' },
-  // { command: 'film', description: 'film' },
+  {
+    command: 'start',
+    description: 'Chào mừng bạn đến với nhóm đặt cơm tầng 12 🍴🍴🍴',
+  },
   {
     command: 'order',
     description: 'Đặt món theo cú pháp: /order {text}',
   },
   {
-    command: 'paylist',
-    description: 'Danh sách thanh toán tiền cơm',
+    command: 'listorders',
+    description: 'Danh sách đặt cơm',
   },
 ]);
 
-bot.onText(/\/start/, (msg) => {
-  bot.sendMessage(msg.chat.id, 'Welcome !!!');
+(async () => {
+  await fs.mkdir(DIR_PATHS.DATA, { recursive: true });
+
+  try {
+    await fs.access(FILE_PATHS.MEMBER, constants.R_OK);
+  } catch (error) {
+    await fs.writeFile(FILE_PATHS.MEMBER, JSON.stringify(INIT_DATA.MEMBER));
+  }
+
+  try {
+    await fs.access(FILE_PATHS.CONFIG, constants.R_OK);
+  } catch (error) {
+    await fs.writeFile(
+      FILE_PATHS.CONFIG,
+      JSON.stringify(INIT_DATA.CONFIG, null, 2),
+    );
+  }
+
+  try {
+    await fs.access(FILE_PATHS.ORDER, constants.R_OK);
+  } catch (error) {
+    await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(INIT_DATA.ORDER));
+  }
+})();
+
+bot.onText(/\/start/, async (msg) => {
+  const members = await getData(FILE_PATHS.MEMBER);
+  const member = members.find((x) => x.id === msg.from.id);
+
+  if (!member) {
+    members.push({
+      id: msg.from.id,
+      name: msg.from.username || `${msg.from.first_name} ${msg.from.last_name}`,
+    });
+    await fs.writeFile(FILE_PATHS.MEMBER, JSON.stringify(members, null, 2));
+  }
+
+  bot.sendMessage(
+    msg.chat.id,
+    'Chào mừng bạn đến với nhóm đặt cơm tầng 12 🍴🍴🍴',
+  );
 });
 
-// bot.onText(/\/weather/, (msg) => {
-//   bot.sendMessage(msg.chat.id, 'Get weather');
-// });
-
-// bot.onText(/\/sticker/, (msg) => {
-//   bot.sendMessage(msg.chat.id, 'Get sticker');
-// });
-
-// bot.onText(/\/location/, (msg) => {
-//   bot.sendMessage(msg.chat.id, 'Send location');
-// });
-
-// bot.onText(/\/music/, (msg) => {
-//   bot.sendMessage(msg.chat.id, 'Play music');
-// });
-
-// bot.onText(/\/film/, (msg) => {
-//   bot.sendMessage(msg.chat.id, 'Get link film');
-// });
-
-const orderMealFilePath = './order-meal.json';
-const emptyOrder = {};
-
-try {
-  fs.access(orderMealFilePath, constants.R_OK);
-} catch (error) {
-  fs.writeFile(orderMealFilePath, JSON.stringify(emptyOrder), (err) => {
-    if (err) throw err;
-    console.log('Data written to file');
-  });
-}
-
-bot.onText(/[\/order@t12_order_bot | \/order]+ (.+)/, async (msg, match) => {
+bot.onText(KEY.ORDER, async (msg, match) => {
   const dish = {
     author: msg.from.username || `${msg.from.first_name} ${msg.from.last_name}`,
-    text: match[1],
+    text: match[2],
   };
 
-  const jsonFile = await fs.readFile(orderMealFilePath, { encoding: 'utf8' });
+  const jsonFile = await fs.readFile(FILE_PATHS.ORDER, { encoding: 'utf8' });
 
   const data = JSON.parse(jsonFile);
-  data[dish.author] = { text: dish.text, paid: false };
+  data[dish.author] = { text: dish.text, paid: false, received: false };
 
-  await fs.writeFile(orderMealFilePath, JSON.stringify(data, null, 2));
+  await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(data, null, 2));
 });
 
-bot.onText(/\/orderdone/, async (msg) => {
-  const data = await fs.readFile(orderMealFilePath);
-  const orders = JSON.parse(data);
-  const orderKeys = Object.keys(orders);
+bot.onText(KEY.ORDER_LIST, async (msg) => {
+  const orders = await getData(FILE_PATHS.ORDER);
+  const orderOwners = Object.keys(orders);
 
   let message = '';
-  if (orderKeys.length) {
-    for (const [i, o] of orderKeys.entries()) {
+  if (orderOwners.length) {
+    for (const [i, o] of orderOwners.entries()) {
       message = message.concat(
-        `${i + 1}. ${o}: ${orders[o].text}${i < orderKeys.length ? '\n' : ''}`,
+        `${i + 1}. ${o}: ${orders[o].text}${
+          i < orderOwners.length ? '\n' : ''
+        }`,
       );
     }
 
@@ -93,12 +114,10 @@ bot.onText(/\/orderdone/, async (msg) => {
   }
 });
 
-bot.onText(/\/paylist/, async (msg) => {
-  const data = await fs.readFile(orderMealFilePath);
-  const orders = JSON.parse(data);
-  const orderKeys = Object.keys(orders);
+bot.onText(KEY.PAY_LIST, async (msg) => {
+  const inlineKeyboard = await getKeyboardOrders();
 
-  if (orderKeys.length) {
+  if (inlineKeyboard) {
     bot.sendChatAction(msg.chat.id, 'typing');
     bot.sendMessage(
       msg.chat.id,
@@ -106,26 +125,26 @@ bot.onText(/\/paylist/, async (msg) => {
       {
         reply_markup: {
           resize_keyboard: true,
-          inline_keyboard: [
-            ...orderKeys.map((key) => {
-              const order = orders[key];
+          inline_keyboard: inlineKeyboard,
+        },
+      },
+    );
+  }
+});
 
-              return [
-                {
-                  text: key,
-                  callback_data: 'username',
-                },
-                {
-                  text: `Đã gửi ${order.paid ? '✅' : '❌'}`,
-                  callback_data: `paid ${key}`,
-                },
-                {
-                  text: `Đã nhận ${order.received ? '✅' : '❌'}`,
-                  callback_data: `received ${key}`,
-                },
-              ];
-            }),
-          ],
+bot.onText(KEY.SET_PAYEE, async (msg) => {
+  console.log('Set payee msg:', msg);
+  const inlineKeyboard = await getKeyboardPayeeMembers();
+
+  if (inlineKeyboard) {
+    bot.sendChatAction(GROUP_ORDER_ID, 'typing');
+    bot.sendMessage(
+      GROUP_ORDER_ID,
+      `Thiết lập người nhận tiền.\nDanh sách thành viên:`,
+      {
+        reply_markup: {
+          resize_keyboard: true,
+          inline_keyboard: inlineKeyboard,
         },
       },
     );
@@ -133,78 +152,126 @@ bot.onText(/\/paylist/, async (msg) => {
 });
 
 bot.on('edited_message', async (query) => {
-  if (new RegExp(/[\/order@t12_order_bot | \/order]+ (.+)/)) {
-    const text = query.text
-      .replace(/[\/order@t12_order_bot | \/order]+/i, ' ')
-      .trim();
+  if (new RegExp(KEY.ORDER).test(query.text)) {
+    const text = query.text.replace(REGEXP_REPLACE.ORDER, ' ').trim();
 
-    const data = await fs.readFile(orderMealFilePath);
-    const orders = JSON.parse(data);
+    const orders = await getData(FILE_PATHS.ORDER);
 
     orders[
       query.from.username || `${query.from.first_name} ${query.from.last_name}`
     ].text = text;
 
-    await fs.writeFile(orderMealFilePath, JSON.stringify(orders, null, 2));
+    await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(orders, null, 2));
   }
 });
 
 bot.on('callback_query', async (query) => {
-  if (new RegExp(/paid (.*)/).test(query.data)) {
-    const splitData = query.data.split(' ');
+  console.log('Query:', query);
 
-    const userPaid = splitData[1];
+  if (new RegExp(REGEX_CALLBACK.PAID).test(query.data)) {
+    const userPaid = query.data.replace(REGEXP_REPLACE.PAID, ' ').trim();
 
-    const data = await fs.readFile(orderMealFilePath);
-
-    const orders = JSON.parse(data);
-
+    const orders = await getData(FILE_PATHS.ORDER);
     orders[userPaid].paid = !orders[userPaid].paid;
 
-    await fs.writeFile(orderMealFilePath, JSON.stringify(orders, null, 2));
+    const resUpdate = await updateOrders(orders);
+    if (resUpdate) {
+      const replyMarkup = query.message.reply_markup.inline_keyboard.map((e) =>
+        e.map((x) =>
+          x.callback_data === query.data
+            ? {
+                ...x,
+                text: `Đã gửi ${orders[userPaid].paid ? '✅' : '❌'} `,
+              }
+            : x,
+        ),
+      );
 
-    const replyMarkup = query.message.reply_markup.inline_keyboard.map((e) =>
-      e.map((x) =>
-        x.callback_data === query.data
-          ? {
-              ...x,
-              text: `Đã gửi ${orders[userPaid].paid ? '✅' : '❌'} `,
-            }
-          : x,
-      ),
-    );
-
-    bot.editMessageReplyMarkup(
-      { inline_keyboard: replyMarkup },
-      { chat_id: query.message.chat.id, message_id: query.message.message_id },
-    );
+      bot.editMessageReplyMarkup(
+        { inline_keyboard: replyMarkup },
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+        },
+      );
+    }
   }
 
-  if (new RegExp(/received (.*)/).test(query.data)) {
-    const splitData = query.data.split(' ');
-    const userPaid = splitData[1];
-    const data = await fs.readFile(orderMealFilePath);
+  if (new RegExp(REGEX_CALLBACK.RECEIVED).test(query.data)) {
+    const config = await getData(FILE_PATHS.CONFIG);
 
-    const orders = JSON.parse(data);
+    if (query.from.id === config.payee.id) {
+      const userPaid = query.data.replace(REGEXP_REPLACE.RECEIVED, ' ').trim();
 
-    orders[userPaid].received = !orders[userPaid].received;
+      const orders = await getData(FILE_PATHS.ORDER);
+      orders[userPaid].received = !orders[userPaid].received;
 
-    await fs.writeFile(orderMealFilePath, JSON.stringify(orders, null, 2));
+      const resUpdate = await updateOrders(orders);
+      if (resUpdate) {
+        const replyMarkup = query.message.reply_markup.inline_keyboard.map(
+          (e) =>
+            e.map((x) =>
+              x.callback_data === query.data
+                ? {
+                    ...x,
+                    text: `Đã nhận ${orders[userPaid].received ? '✅' : '❌'} `,
+                  }
+                : x,
+            ),
+        );
+
+        bot.editMessageReplyMarkup(
+          { inline_keyboard: replyMarkup },
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+          },
+        );
+      }
+    } else {
+      bot.sendMessage(
+        query.message.chat.id,
+        `Lêu lêu <b>${
+          `@${query.from.username}` ||
+          `${query.from.first_name} ${query.from.last_name}`
+        }</b>. Bạn không phải người thu tiền 🤪🤪🤪`,
+        {
+          parse_mode: 'HTML',
+        },
+      );
+    }
+  }
+
+  if (new RegExp(REGEX_CALLBACK.SET_PAYEE).test(query.data)) {
+    const members = await getData(FILE_PATHS.MEMBER);
+    const config = await getData(FILE_PATHS.CONFIG);
+
+    const payeeId = query.data.replace(REGEXP_REPLACE.SET_PAYEE, ' ').trim();
+    const member = members.find((x) => x.id === +payeeId);
+
+    config.payee = member;
+
+    await fs.writeFile(FILE_PATHS.CONFIG, JSON.stringify(config, null, 2));
 
     const replyMarkup = query.message.reply_markup.inline_keyboard.map((e) =>
       e.map((x) =>
         x.callback_data === query.data
           ? {
               ...x,
-              text: `Đã nhận ${orders[userPaid].received ? '✅' : '❌'} `,
+              text: `${member.name} ${
+                config.payee.name === x.text.trim() ? '✅' : ''
+              } `,
             }
-          : x,
+          : { ...x, text: x.text.split(' ')[0] },
       ),
     );
 
     bot.editMessageReplyMarkup(
       { inline_keyboard: replyMarkup },
-      { chat_id: query.message.chat.id, message_id: query.message.message_id },
+      {
+        chat_id: query.message.chat.id,
+        message_id: query.message.message_id,
+      },
     );
   }
 });
@@ -215,9 +282,22 @@ bot.on('callback_query', async (query) => {
 
 const jobRemind = new CronJob(
   '0 15 * * 1-5',
-  function () {
-    bot.sendChatAction(group_t12_id, 'typing');
-    bot.sendMessage(group_t12_id, 'Lệ quyên lệ quyên mn ơi 💸💸💸');
+  async function () {
+    const inlineKeyboard = await getKeyboardOrders();
+
+    if (inlineKeyboard) {
+      bot.sendChatAction(GROUP_ORDER_ID, 'typing');
+      bot.sendMessage(
+        GROUP_ORDER_ID,
+        `Lệ quyên lệ quyên mn ơi (${format(new Date(), 'dd-MM-yyyy')}) 💸💸💸 `,
+        {
+          reply_markup: {
+            resize_keyboard: true,
+            inline_keyboard: inlineKeyboard,
+          },
+        },
+      );
+    }
   },
   null,
   true,
@@ -229,7 +309,7 @@ jobRemind.start();
 const jobClean = new CronJob(
   '0 0 * * *',
   async function () {
-    await fs.writeFile(orderMealFilePath, JSON.stringify(emptyOrder));
+    await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(initOrder));
   },
   null,
   true,

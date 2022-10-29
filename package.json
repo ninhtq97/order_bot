@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon app.js --ignore ./*.json"
+    "start": "nodemon --ignore ./*.json --exec node app.js "
   },
   "keywords": [],
   "author": "",

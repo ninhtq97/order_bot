@@ -1,0 +1,66 @@
+const fs = require('fs/promises');
+const { FILE_PATHS } = require('../constants');
+
+exports.getData = async (path) => {
+  const data = await fs.readFile(path);
+  return JSON.parse(data);
+};
+
+exports.getKeyboardPayeeMembers = async () => {
+  const members = await this.getData(FILE_PATHS.MEMBER);
+  const config = await this.getData(FILE_PATHS.CONFIG);
+
+  if (members.length) {
+    return [
+      ...members.map((member) => {
+        return [
+          {
+            text: `${member.name} ${config.payee.id === member.id ? '✅' : ''}`,
+            callback_data: `setpayee ${member.id}`,
+          },
+        ];
+      }),
+    ];
+  }
+
+  return undefined;
+};
+
+exports.getKeyboardOrders = async () => {
+  const orders = await this.getData(FILE_PATHS.ORDER);
+  const orderOwners = Object.keys(orders);
+
+  if (orderOwners.length) {
+    return [
+      ...orderOwners.map((key) => {
+        const order = orders[key];
+
+        return [
+          {
+            text: key,
+            callback_data: 'username',
+          },
+          {
+            text: `Đã gửi ${order.paid ? '✅' : '❌'}`,
+            callback_data: `paid ${key}`,
+          },
+          {
+            text: `Đã nhận ${order.received ? '✅' : '❌'}`,
+            callback_data: `received ${key}`,
+          },
+        ];
+      }),
+    ];
+  }
+
+  return undefined;
+};
+
+exports.updateOrders = async (orders) => {
+  try {
+    await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(orders, null, 2));
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
