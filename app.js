@@ -32,7 +32,7 @@ bot.setMyCommands([
     description: 'Đặt món theo cú pháp: /order {text}',
   },
   {
-    command: 'listorders',
+    command: 'orderlist',
     description: 'Danh sách đặt cơm',
   },
 ]);
