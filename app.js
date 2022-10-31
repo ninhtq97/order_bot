@@ -25,8 +25,8 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
 bot.setMyCommands([
   {
-    command: 'start',
-    description: 'Chào mừng bạn đến với nhóm đặt cơm tầng 12 🍴🍴🍴',
+    command: 'registerpayee',
+    description: 'Thêm vào danh sách lựa chọn người thu tiền',
   },
   {
     command: 'order',
@@ -63,7 +63,7 @@ bot.setMyCommands([
   }
 })();
 
-bot.onText(/\/start/, async (msg) => {
+bot.onText(/\/registerpayee/, async (msg) => {
   const members = await getData(FILE_PATHS.MEMBER);
   const member = members.find((x) => x.id === msg.from.id);
 
@@ -74,11 +74,6 @@ bot.onText(/\/start/, async (msg) => {
     });
     await fs.writeFile(FILE_PATHS.MEMBER, JSON.stringify(members, null, 2));
   }
-
-  bot.sendMessage(
-    msg.chat.id,
-    'Chào mừng bạn đến với nhóm đặt cơm tầng 12 🍴🍴🍴',
-  );
 });
 
 bot.onText(KEY.ORDER, async (msg, match) => {
