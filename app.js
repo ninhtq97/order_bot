@@ -63,7 +63,12 @@ bot.setMyCommands([
   }
 })();
 
+bot.on('message', (msg) => {
+  console.log('Message:', msg);
+});
+
 bot.onText(/\/registerpayee/, async (msg) => {
+  console.log('Register payee msg:', msg);
   const members = await getData(FILE_PATHS.MEMBER);
   const member = members.find((x) => x.id === msg.from.id);
 
@@ -73,6 +78,13 @@ bot.onText(/\/registerpayee/, async (msg) => {
       name: msg.from.username || `${msg.from.first_name} ${msg.from.last_name}`,
     });
     await fs.writeFile(FILE_PATHS.MEMBER, JSON.stringify(members, null, 2));
+    bot.sendChatAction(msg.chat.id, 'typing');
+    bot.sendMessage(
+      msg.chat.id,
+      `Đã thêm ${
+        msg.from.username || `${msg.from.first_name} ${msg.from.last_name}`
+      } vào danh sách`,
+    );
   }
 });
 
@@ -270,10 +282,6 @@ bot.on('callback_query', async (query) => {
     );
   }
 });
-
-// bot.on('message', (msg) => {
-//   console.log('Message:', msg);
-// });
 
 const jobRemind = new CronJob(
   '0 15 * * 1-5',
