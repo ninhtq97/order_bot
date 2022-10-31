@@ -319,7 +319,7 @@ jobRemind.start();
 const jobClean = new CronJob(
   '0 0 * * *',
   async function () {
-    await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(initOrder));
+    await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(INIT_DATA.ORDER));
   },
   null,
   true,
