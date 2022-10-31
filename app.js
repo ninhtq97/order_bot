@@ -41,18 +41,21 @@ bot.setMyCommands([
   try {
     await fs.readdir(DIR_PATHS.DATA);
   } catch (error) {
+    console.log('A');
     await fs.mkdir(DIR_PATHS.DATA, { recursive: true });
   }
 
   try {
     await fs.access(FILE_PATHS.MEMBER, constants.R_OK);
   } catch (error) {
+    console.log('B');
     await fs.writeFile(FILE_PATHS.MEMBER, JSON.stringify(INIT_DATA.MEMBER));
   }
 
   try {
     await fs.access(FILE_PATHS.CONFIG, constants.R_OK);
   } catch (error) {
+    console.log('C');
     await fs.writeFile(
       FILE_PATHS.CONFIG,
       JSON.stringify(INIT_DATA.CONFIG, null, 2),
@@ -62,6 +65,7 @@ bot.setMyCommands([
   try {
     await fs.access(FILE_PATHS.ORDER, constants.R_OK);
   } catch (error) {
+    console.log('D');
     await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(INIT_DATA.ORDER));
   }
 })();
