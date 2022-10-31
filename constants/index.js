@@ -15,6 +15,7 @@ exports.KEY = {
   ORDER: /(\/order@t12_order_bot|\/order) (.+)/,
   ORDER_LIST: /\/orderlist/,
   PAY_LIST: /\/paylist/,
+  REGISTER_PAYEE: /\/registerpayee/,
   SET_PAYEE: /\/setpayee/,
 };
 

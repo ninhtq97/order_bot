@@ -4,7 +4,6 @@ const { constants } = require('fs/promises');
 const { format } = require('date-fns');
 const {
   KEY,
-  REGEXP,
   BOT_TOKEN,
   GROUP_ORDER_ID,
   FILE_PATHS,
@@ -67,23 +66,31 @@ bot.on('message', (msg) => {
   console.log('Message:', msg);
 });
 
-bot.onText(/\/registerpayee/, async (msg) => {
-  console.log('Register payee msg:', msg);
+bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
   const members = await getData(FILE_PATHS.MEMBER);
   const member = members.find((x) => x.id === msg.from.id);
 
+  bot.sendChatAction(msg.chat.id, 'typing');
   if (!member) {
     members.push({
       id: msg.from.id,
       name: msg.from.username || `${msg.from.first_name} ${msg.from.last_name}`,
     });
     await fs.writeFile(FILE_PATHS.MEMBER, JSON.stringify(members, null, 2));
-    bot.sendChatAction(msg.chat.id, 'typing');
     bot.sendMessage(
       msg.chat.id,
       `Đã thêm ${
-        msg.from.username || `${msg.from.first_name} ${msg.from.last_name}`
+        `@${msg.from.username}` ||
+        `${msg.from.first_name} ${msg.from.last_name}`
       } vào danh sách`,
+    );
+  } else {
+    bot.sendMessage(
+      msg.chat.id,
+      `${
+        `@${msg.from.username}` ||
+        `${msg.from.first_name} ${msg.from.last_name}`
+      } đã có trong danh sách`,
     );
   }
 });
@@ -140,13 +147,12 @@ bot.onText(KEY.PAY_LIST, async (msg) => {
 });
 
 bot.onText(KEY.SET_PAYEE, async (msg) => {
-  console.log('Set payee msg:', msg);
   const inlineKeyboard = await getKeyboardPayeeMembers();
 
   if (inlineKeyboard) {
-    bot.sendChatAction(GROUP_ORDER_ID, 'typing');
+    bot.sendChatAction(msg.chat.id, 'typing');
     bot.sendMessage(
-      GROUP_ORDER_ID,
+      msg.chat.id,
       `Thiết lập người nhận tiền.\nDanh sách thành viên:`,
       {
         reply_markup: {
@@ -256,30 +262,31 @@ bot.on('callback_query', async (query) => {
     const payeeId = query.data.replace(REGEXP_REPLACE.SET_PAYEE, ' ').trim();
     const member = members.find((x) => x.id === +payeeId);
 
-    config.payee = member;
+    if (config.payee.id !== member.id) {
+      config.payee = member;
+      await fs.writeFile(FILE_PATHS.CONFIG, JSON.stringify(config, null, 2));
 
-    await fs.writeFile(FILE_PATHS.CONFIG, JSON.stringify(config, null, 2));
+      const replyMarkup = query.message.reply_markup.inline_keyboard.map((e) =>
+        e.map((x) =>
+          x.callback_data === query.data
+            ? {
+                ...x,
+                text: `${member.name} ${
+                  new RegExp(config.payee.name).test(x.text.trim()) ? '✅' : ''
+                }`,
+              }
+            : { ...x, text: x.text.split(' ')[0] },
+        ),
+      );
 
-    const replyMarkup = query.message.reply_markup.inline_keyboard.map((e) =>
-      e.map((x) =>
-        x.callback_data === query.data
-          ? {
-              ...x,
-              text: `${member.name} ${
-                config.payee.name === x.text.trim() ? '✅' : ''
-              } `,
-            }
-          : { ...x, text: x.text.split(' ')[0] },
-      ),
-    );
-
-    bot.editMessageReplyMarkup(
-      { inline_keyboard: replyMarkup },
-      {
-        chat_id: query.message.chat.id,
-        message_id: query.message.message_id,
-      },
-    );
+      bot.editMessageReplyMarkup(
+        { inline_keyboard: replyMarkup },
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+        },
+      );
+    }
   }
 });
 
