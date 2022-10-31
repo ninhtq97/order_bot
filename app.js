@@ -38,7 +38,11 @@ bot.setMyCommands([
 ]);
 
 (async () => {
-  await fs.mkdir(DIR_PATHS.DATA, { recursive: true });
+  try {
+    await fs.readdir(DIR_PATHS.DATA);
+  } catch (error) {
+    await fs.mkdir(DIR_PATHS.DATA, { recursive: true });
+  }
 
   try {
     await fs.access(FILE_PATHS.MEMBER, constants.R_OK);
