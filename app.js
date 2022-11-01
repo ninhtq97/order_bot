@@ -98,17 +98,17 @@ bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
 });
 
 bot.onText(KEY.ORDER, async (msg, match) => {
-  const dish = {
-    author:
-      msg.from.username ||
-      `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim(),
-    text: match[2],
-  };
-
   const jsonFile = await fs.readFile(FILE_PATHS.ORDER, { encoding: 'utf8' });
 
   const data = JSON.parse(jsonFile);
-  data[dish.author] = { text: dish.text, paid: false, received: false };
+  data[msg.from.id] = {
+    name:
+      msg.from.username ||
+      `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim(),
+    text: match[2],
+    paid: false,
+    received: false,
+  };
 
   await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(data, null, 2));
 });
@@ -121,7 +121,7 @@ bot.onText(KEY.ORDER_LIST, async (msg) => {
   if (orderOwners.length) {
     for (const [i, o] of orderOwners.entries()) {
       message = message.concat(
-        `${i + 1}. ${o}: ${orders[o].text}${
+        `${i + 1}. ${orders[o].name}: ${orders[o].text}${
           i < orderOwners.length ? '\n' : ''
         }`,
       );
@@ -132,23 +132,23 @@ bot.onText(KEY.ORDER_LIST, async (msg) => {
   }
 });
 
-bot.onText(KEY.PAY_LIST, async (msg) => {
-  const inlineKeyboard = await getKeyboardOrders();
+// bot.onText(KEY.PAY_LIST, async (msg) => {
+//   const inlineKeyboard = await getKeyboardOrders();
 
-  if (inlineKeyboard) {
-    bot.sendChatAction(msg.chat.id, 'typing');
-    bot.sendMessage(
-      msg.chat.id,
-      `Danh sách thanh toán tiền cơm ngày ${format(new Date(), 'dd-MM-yyyy')}`,
-      {
-        reply_markup: {
-          resize_keyboard: true,
-          inline_keyboard: inlineKeyboard,
-        },
-      },
-    );
-  }
-});
+//   if (inlineKeyboard) {
+//     bot.sendChatAction(msg.chat.id, 'typing');
+//     bot.sendMessage(
+//       msg.chat.id,
+//       `Danh sách thanh toán tiền cơm ngày ${format(new Date(), 'dd-MM-yyyy')}`,
+//       {
+//         reply_markup: {
+//           resize_keyboard: true,
+//           inline_keyboard: inlineKeyboard,
+//         },
+//       },
+//     );
+//   }
+// });
 
 bot.onText(KEY.SET_PAYEE, async (msg) => {
   const inlineKeyboard = await getKeyboardPayeeMembers();
@@ -174,9 +174,10 @@ bot.on('edited_message', async (query) => {
 
     const orders = await getData(FILE_PATHS.ORDER);
 
-    orders[
-      query.from.username || `${query.from.first_name} ${query.from.last_name}`
-    ].text = text;
+    orders[query.from.id].text = text;
+    orders[query.from.id].name =
+      query.from.username ||
+      `${query.from.first_name || ''} ${query.from.last_name || ''}`.trim();
 
     await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(orders, null, 2));
   }
@@ -186,29 +187,47 @@ bot.on('callback_query', async (query) => {
   console.log('Query:', query);
 
   if (new RegExp(REGEX_CALLBACK.PAID).test(query.data)) {
+    const config = await getData(FILE_PATHS.CONFIG);
     const userPaid = query.data.replace(REGEXP_REPLACE.PAID, ' ').trim();
+    const isOwner =
+      query.from.id === +userPaid || query.from.id === config.payee.id;
 
-    const orders = await getData(FILE_PATHS.ORDER);
-    orders[userPaid].paid = !orders[userPaid].paid;
+    bot.sendChatAction(query.message.chat.id, 'typing');
+    if (isOwner) {
+      const orders = await getData(FILE_PATHS.ORDER);
+      orders[userPaid].paid = !orders[userPaid].paid;
 
-    const resUpdate = await updateOrders(orders);
-    if (resUpdate) {
-      const replyMarkup = query.message.reply_markup.inline_keyboard.map((e) =>
-        e.map((x) =>
-          x.callback_data === query.data
-            ? {
-                ...x,
-                text: `Đã gửi ${orders[userPaid].paid ? '✅' : '❌'} `,
-              }
-            : x,
-        ),
-      );
+      const resUpdate = await updateOrders(orders);
+      if (resUpdate) {
+        const replyMarkup = query.message.reply_markup.inline_keyboard.map(
+          (e) =>
+            e.map((x) =>
+              x.callback_data === query.data
+                ? {
+                    ...x,
+                    text: `Đã gửi ${orders[userPaid].paid ? '✅' : '❌'} `,
+                  }
+                : x,
+            ),
+        );
 
-      bot.editMessageReplyMarkup(
-        { inline_keyboard: replyMarkup },
+        bot.editMessageReplyMarkup(
+          { inline_keyboard: replyMarkup },
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+          },
+        );
+      }
+    } else {
+      bot.sendMessage(
+        query.message.chat.id,
+        `Lêu lêu <b>${
+          `@${query.from.username}` ||
+          `${query.from.first_name} ${query.from.last_name}`
+        }</b>. Đừng spam bot, bot tức là không cho order nhá 😜😜😜`,
         {
-          chat_id: query.message.chat.id,
-          message_id: query.message.message_id,
+          parse_mode: 'HTML',
         },
       );
     }
@@ -297,13 +316,39 @@ bot.on('callback_query', async (query) => {
 const jobRemind = new CronJob(
   '0 15 * * 1-5',
   async function () {
+    const config = await getData(FILE_PATHS.CONFIG);
     const inlineKeyboard = await getKeyboardOrders();
 
+    const existPayeeImages = { BANK: false, MOMO: false };
+    const payeeImages = {
+      BANK: `${DIR_PATHS.IMAGES}/${config.payee.id}_bank.jpg`,
+      MOMO: `${DIR_PATHS.IMAGES}/${config.payee.id}_momo.jpg`,
+    };
+
+    try {
+      await fs.access(payeeImages.BANK, constants.R_OK);
+      existPayeeImages['BANK'] = true;
+    } catch (error) {}
+
+    try {
+      await fs.access(payeeImages.MOMO, constants.R_OK);
+      existPayeeImages['MOMO'] = true;
+    } catch (error) {}
+
+    const isPayee = existPayeeImages['BANK'] && existPayeeImages['MOMO'];
+
+    bot.sendChatAction(GROUP_ORDER_ID, 'typing');
+    if (isPayee) {
+      bot.sendMediaGroup(
+        GROUP_ORDER_ID,
+        Object.values(payeeImages).map((e) => ({ type: 'photo', media: e })),
+      );
+    }
+
     if (inlineKeyboard) {
-      bot.sendChatAction(GROUP_ORDER_ID, 'typing');
       bot.sendMessage(
         GROUP_ORDER_ID,
-        `Lệ quyên lệ quyên mn ơi (${format(new Date(), 'dd-MM-yyyy')}) 💸💸💸 `,
+        `Lệ quyên lệ quyên mn ơi (${format(new Date(), 'dd-MM-yyyy')}) 💸💸💸`,
         {
           reply_markup: {
             resize_keyboard: true,
