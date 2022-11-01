@@ -313,7 +313,7 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-const jobRemind = new CronJob(
+const jobAnnouncePayment = new CronJob(
   '0 15 * * 1-5',
   async function () {
     const config = await getData(FILE_PATHS.CONFIG);
@@ -363,7 +363,39 @@ const jobRemind = new CronJob(
   'Asia/Ho_Chi_Minh',
 );
 
-jobRemind.start();
+jobAnnouncePayment.start();
+
+const jobReAnnouncePayment = new CronJob(
+  '0 17 * * 1-5',
+  async function () {
+    const orders = await getData(FILE_PATHS.ORDER);
+
+    for (const owner in orders) {
+      orders[owner].paid && delete orders[owner];
+    }
+
+    const inlineKeyboard = await getKeyboardOrders(orders);
+
+    bot.sendMessage(
+      GROUP_ORDER_ID,
+      `Cuối ngày rồi, đừng quên trả tiền cơm ngày (${format(
+        new Date(),
+        'dd-MM-yyyy',
+      )}) nhé 💸💸💸`,
+      {
+        reply_markup: {
+          resize_keyboard: true,
+          inline_keyboard: inlineKeyboard,
+        },
+      },
+    );
+  },
+  null,
+  true,
+  'Asia/Ho_Chi_Minh',
+);
+
+jobReAnnouncePayment.start();
 
 const jobClean = new CronJob(
   '0 0 * * *',

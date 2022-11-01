@@ -26,8 +26,8 @@ exports.getKeyboardPayeeMembers = async () => {
   return undefined;
 };
 
-exports.getKeyboardOrders = async () => {
-  const orders = await this.getData(FILE_PATHS.ORDER);
+exports.getKeyboardOrders = async (initOrders) => {
+  const orders = initOrders || (await this.getData(FILE_PATHS.ORDER));
   const orderOwners = Object.keys(orders);
 
   if (orderOwners.length) {
