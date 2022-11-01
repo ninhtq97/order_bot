@@ -74,14 +74,16 @@ bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
   if (!member) {
     members.push({
       id: msg.from.id,
-      name: msg.from.username || `${msg.from.first_name} ${msg.from.last_name}`,
+      name:
+        msg.from.username ||
+        `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim(),
     });
     await fs.writeFile(FILE_PATHS.MEMBER, JSON.stringify(members, null, 2));
     bot.sendMessage(
       msg.chat.id,
       `Đã thêm ${
         `@${msg.from.username}` ||
-        `${msg.from.first_name} ${msg.from.last_name}`
+        `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim()
       } vào danh sách`,
     );
   } else {
@@ -89,7 +91,7 @@ bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
       msg.chat.id,
       `${
         `@${msg.from.username}` ||
-        `${msg.from.first_name} ${msg.from.last_name}`
+        `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim()
       } đã có trong danh sách`,
     );
   }
@@ -97,7 +99,9 @@ bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
 
 bot.onText(KEY.ORDER, async (msg, match) => {
   const dish = {
-    author: msg.from.username || `${msg.from.first_name} ${msg.from.last_name}`,
+    author:
+      msg.from.username ||
+      `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim(),
     text: match[2],
   };
 
