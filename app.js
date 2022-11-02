@@ -366,24 +366,26 @@ const jobReAnnouncePayment = new CronJob(
     const orders = await getData(FILE_PATHS.ORDER);
 
     for (const owner in orders) {
-      orders[owner].paid && delete orders[owner];
+      orders[owner].paid && orders[owner].received && delete orders[owner];
     }
 
     const inlineKeyboard = await getKeyboardOrders(orders);
 
-    bot.sendMessage(
-      GROUP_ORDER_ID,
-      `Cuối ngày rồi, đừng quên trả tiền cơm ngày (${format(
-        new Date(),
-        'dd-MM-yyyy',
-      )}) nhé 💸💸💸`,
-      {
-        reply_markup: {
-          resize_keyboard: true,
-          inline_keyboard: inlineKeyboard,
+    if (inlineKeyboard) {
+      bot.sendMessage(
+        GROUP_ORDER_ID,
+        `Cuối ngày rồi, đừng quên trả tiền cơm ngày (${format(
+          new Date(),
+          'dd-MM-yyyy',
+        )}) nhé 💸💸💸`,
+        {
+          reply_markup: {
+            resize_keyboard: true,
+            inline_keyboard: inlineKeyboard,
+          },
         },
-      },
-    );
+      );
+    }
   },
   null,
   true,
