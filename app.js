@@ -169,8 +169,8 @@ bot.on('edited_message', async (query) => {
     const text = query.text.replace(REGEXP_REPLACE.ORDER, ' ').trim();
     const orders = await getData(FILE_PATHS.ORDER);
 
-    orders[query.from.id].text = text;
-    orders[query.from.id].name =
+    orders[`o:${query.from.id}`].text = text;
+    orders[`o:${query.from.id}`].name =
       query.from.username ||
       `${query.from.first_name || ''} ${query.from.last_name || ''}`.trim();
 
