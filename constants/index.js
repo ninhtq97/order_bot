@@ -5,7 +5,7 @@ exports.REGEX_CALLBACK = {
 };
 
 exports.REGEXP_REPLACE = {
-  ORDER: /(\/order(.+?) )/,
+  ORDER: /(\/order |\/order@(.+?) )/,
   PAID: /paid/,
   RECEIVED: /received/,
   SET_PAYEE: /setpayee/,

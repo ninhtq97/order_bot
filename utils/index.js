@@ -56,9 +56,9 @@ exports.getKeyboardOrders = async (initOrders) => {
   return undefined;
 };
 
-exports.updateOrders = async (orders) => {
+exports.updateData = async (path, data) => {
   try {
-    await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(orders, null, 2));
+    await fs.writeFile(path, JSON.stringify(data, null, 2));
     return true;
   } catch (error) {
     return false;

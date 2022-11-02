@@ -14,9 +14,9 @@ const {
 } = require('./constants');
 const {
   getKeyboardOrders,
-  updateOrders,
   getData,
   getKeyboardPayeeMembers,
+  updateData,
 } = require('./utils');
 const CronJob = require('cron').CronJob;
 
@@ -43,22 +43,19 @@ bot.setMyCommands([
   try {
     await fs.access(FILE_PATHS.MEMBER, constants.R_OK);
   } catch (error) {
-    await fs.writeFile(FILE_PATHS.MEMBER, JSON.stringify(INIT_DATA.MEMBER));
+    await updateData(FILE_PATHS.MEMBER, INIT_DATA.MEMBER);
   }
 
   try {
     await fs.access(FILE_PATHS.CONFIG, constants.R_OK);
   } catch (error) {
-    await fs.writeFile(
-      FILE_PATHS.CONFIG,
-      JSON.stringify(INIT_DATA.CONFIG, null, 2),
-    );
+    await updateData(FILE_PATHS.CONFIG, INIT_DATA.CONFIG);
   }
 
   try {
     await fs.access(FILE_PATHS.ORDER, constants.R_OK);
   } catch (error) {
-    await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(INIT_DATA.ORDER));
+    await updateData(FILE_PATHS.ORDER, INIT_DATA.ORDER);
   }
 })();
 
@@ -78,7 +75,7 @@ bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
         msg.from.username ||
         `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim(),
     });
-    await fs.writeFile(FILE_PATHS.MEMBER, JSON.stringify(members, null, 2));
+    await updateData(FILE_PATHS.MEMBER, members);
     bot.sendMessage(
       msg.chat.id,
       `Đã thêm ${
@@ -98,10 +95,9 @@ bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
 });
 
 bot.onText(KEY.ORDER, async (msg, match) => {
-  const jsonFile = await fs.readFile(FILE_PATHS.ORDER, { encoding: 'utf8' });
+  const orders = await getData(FILE_PATHS.ORDER);
 
-  const data = JSON.parse(jsonFile);
-  data[msg.from.id] = {
+  orders[`o:${msg.from.id}`] = {
     name:
       msg.from.username ||
       `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim(),
@@ -110,15 +106,15 @@ bot.onText(KEY.ORDER, async (msg, match) => {
     received: false,
   };
 
-  await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(data, null, 2));
+  await updateData(FILE_PATHS.ORDER, orders);
 });
 
 bot.onText(KEY.ORDER_LIST, async (msg) => {
   const orders = await getData(FILE_PATHS.ORDER);
   const orderOwners = Object.keys(orders);
 
-  let message = '';
   if (orderOwners.length) {
+    let message = '';
     for (const [i, o] of orderOwners.entries()) {
       message = message.concat(
         `${i + 1}. ${orders[o].name}: ${orders[o].text}${
@@ -171,7 +167,6 @@ bot.onText(KEY.SET_PAYEE, async (msg) => {
 bot.on('edited_message', async (query) => {
   if (new RegExp(KEY.ORDER).test(query.text)) {
     const text = query.text.replace(REGEXP_REPLACE.ORDER, ' ').trim();
-
     const orders = await getData(FILE_PATHS.ORDER);
 
     orders[query.from.id].text = text;
@@ -179,7 +174,7 @@ bot.on('edited_message', async (query) => {
       query.from.username ||
       `${query.from.first_name || ''} ${query.from.last_name || ''}`.trim();
 
-    await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(orders, null, 2));
+    await updateData(FILE_PATHS.ORDER, orders);
   }
 });
 
@@ -197,7 +192,7 @@ bot.on('callback_query', async (query) => {
       const orders = await getData(FILE_PATHS.ORDER);
       orders[userPaid].paid = !orders[userPaid].paid;
 
-      const resUpdate = await updateOrders(orders);
+      const resUpdate = await updateData(FILE_PATHS.ORDER, orders);
       if (resUpdate) {
         const replyMarkup = query.message.reply_markup.inline_keyboard.map(
           (e) =>
@@ -242,7 +237,7 @@ bot.on('callback_query', async (query) => {
       const orders = await getData(FILE_PATHS.ORDER);
       orders[userPaid].received = !orders[userPaid].received;
 
-      const resUpdate = await updateOrders(orders);
+      const resUpdate = await updateData(FILE_PATHS.ORDER, orders);
       if (resUpdate) {
         const replyMarkup = query.message.reply_markup.inline_keyboard.map(
           (e) =>
@@ -287,7 +282,7 @@ bot.on('callback_query', async (query) => {
 
     if (config.payee.id !== member.id) {
       config.payee = member;
-      await fs.writeFile(FILE_PATHS.CONFIG, JSON.stringify(config, null, 2));
+      await updateData(FILE_PATHS.CONFIG, config);
 
       const replyMarkup = query.message.reply_markup.inline_keyboard.map((e) =>
         e.map((x) =>
@@ -400,7 +395,7 @@ jobReAnnouncePayment.start();
 const jobClean = new CronJob(
   '0 0 * * *',
   async function () {
-    await fs.writeFile(FILE_PATHS.ORDER, JSON.stringify(INIT_DATA.ORDER));
+    await updateData(FILE_PATHS.ORDER, INIT_DATA.ORDER);
   },
   null,
   true,
