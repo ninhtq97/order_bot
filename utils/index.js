@@ -1,6 +1,8 @@
 const fs = require('fs/promises');
 const { FILE_PATHS } = require('../constants');
 
+exports.toOrderKey = (owner) => `o:${owner}`;
+
 exports.getData = async (path) => {
   const data = await fs.readFile(path);
   return JSON.parse(data);

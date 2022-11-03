@@ -17,6 +17,7 @@ const {
   getData,
   getKeyboardPayeeMembers,
   updateData,
+  toOrderKey,
 } = require('./utils');
 const CronJob = require('cron').CronJob;
 
@@ -97,7 +98,7 @@ bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
 bot.onText(KEY.ORDER, async (msg, match) => {
   const orders = await getData(FILE_PATHS.ORDER);
 
-  orders[`o:${msg.from.id}`] = {
+  orders[toOrderKey(msg.from.id)] = {
     name:
       msg.from.username ||
       `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim(),
@@ -169,8 +170,8 @@ bot.on('edited_message', async (query) => {
     const text = query.text.replace(REGEXP_REPLACE.ORDER, ' ').trim();
     const orders = await getData(FILE_PATHS.ORDER);
 
-    orders[`o:${query.from.id}`].text = text;
-    orders[`o:${query.from.id}`].name =
+    orders[toOrderKey(query.from.id)].text = text;
+    orders[toOrderKey(query.from.id)].name =
       query.from.username ||
       `${query.from.first_name || ''} ${query.from.last_name || ''}`.trim();
 
@@ -185,8 +186,8 @@ bot.on('callback_query', async (query) => {
     const config = await getData(FILE_PATHS.CONFIG);
     const userPaid = query.data.replace(REGEXP_REPLACE.PAID, ' ').trim();
     const isOwner =
-      `o:${query.from.id}` === userPaid ||
-      `o:${query.from.id}` === config.payee.id;
+      toOrderKey(query.from.id) === userPaid ||
+      toOrderKey(query.from.id) === config.payee.id;
 
     bot.sendChatAction(query.message.chat.id, 'typing');
     if (isOwner) {
@@ -232,7 +233,7 @@ bot.on('callback_query', async (query) => {
   if (new RegExp(REGEX_CALLBACK.RECEIVED).test(query.data)) {
     const config = await getData(FILE_PATHS.CONFIG);
 
-    if (`o:${query.from.id}` === config.payee.id) {
+    if (toOrderKey(query.from.id) === config.payee.id) {
       const userPaid = query.data.replace(REGEXP_REPLACE.RECEIVED, ' ').trim();
 
       const orders = await getData(FILE_PATHS.ORDER);
