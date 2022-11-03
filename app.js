@@ -185,7 +185,8 @@ bot.on('callback_query', async (query) => {
     const config = await getData(FILE_PATHS.CONFIG);
     const userPaid = query.data.replace(REGEXP_REPLACE.PAID, ' ').trim();
     const isOwner =
-      query.from.id === +userPaid || query.from.id === config.payee.id;
+      `o:${query.from.id}` === userPaid ||
+      `o:${query.from.id}` === config.payee.id;
 
     bot.sendChatAction(query.message.chat.id, 'typing');
     if (isOwner) {
@@ -231,7 +232,7 @@ bot.on('callback_query', async (query) => {
   if (new RegExp(REGEX_CALLBACK.RECEIVED).test(query.data)) {
     const config = await getData(FILE_PATHS.CONFIG);
 
-    if (query.from.id === config.payee.id) {
+    if (`o:${query.from.id}` === config.payee.id) {
       const userPaid = query.data.replace(REGEXP_REPLACE.RECEIVED, ' ').trim();
 
       const orders = await getData(FILE_PATHS.ORDER);
