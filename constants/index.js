@@ -19,7 +19,7 @@ exports.KEY = {
   SET_PAYEE: /\/setpayee/,
 };
 
-exports.GROUP_ORDER_ID = -660634602;
+exports.GROUP_ORDER_ID = -1001627110278;
 exports.BOT_TOKEN = '5716072961:AAGwX7iqdX-o_BIrZCK4J_qmiQipx2CtA50';
 
 exports.DIR_PATHS = {
