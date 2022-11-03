@@ -187,9 +187,8 @@ bot.on('callback_query', async (query) => {
     const userPaid = query.data.replace(REGEXP_REPLACE.PAID, ' ').trim();
     const isOwner =
       toOrderKey(query.from.id) === userPaid ||
-      toOrderKey(query.from.id) === config.payee.id;
+      query.from.id === config.payee.id;
 
-    bot.sendChatAction(query.message.chat.id, 'typing');
     if (isOwner) {
       const orders = await getData(FILE_PATHS.ORDER);
       orders[userPaid].paid = !orders[userPaid].paid;
@@ -217,6 +216,7 @@ bot.on('callback_query', async (query) => {
         );
       }
     } else {
+      bot.sendChatAction(query.message.chat.id, 'typing');
       bot.sendMessage(
         query.message.chat.id,
         `Lêu lêu <b>${
@@ -262,6 +262,7 @@ bot.on('callback_query', async (query) => {
         );
       }
     } else {
+      bot.sendChatAction(query.message.chat.id, 'typing');
       bot.sendMessage(
         query.message.chat.id,
         `Lêu lêu <b>${
