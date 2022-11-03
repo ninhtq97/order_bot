@@ -233,7 +233,7 @@ bot.on('callback_query', async (query) => {
   if (new RegExp(REGEX_CALLBACK.RECEIVED).test(query.data)) {
     const config = await getData(FILE_PATHS.CONFIG);
 
-    if (toOrderKey(query.from.id) === config.payee.id) {
+    if (query.from.id === config.payee.id) {
       const userPaid = query.data.replace(REGEXP_REPLACE.RECEIVED, ' ').trim();
 
       const orders = await getData(FILE_PATHS.ORDER);
