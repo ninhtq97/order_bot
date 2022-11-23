@@ -346,7 +346,7 @@ const jobAnnouncePayment = new CronJob(
     if (inlineKeyboard) {
       bot.sendMessage(
         GROUP_ORDER_ID,
-        `Lệ quyên lệ quyên mn ơi (${format(new Date(), 'dd-MM-yyyy')}) 💸💸💸`,
+        `Đến h lụm thóc ngày (${format(new Date(), 'dd-MM-yyyy')}) 🐹🐹🐹`,
         {
           reply_markup: {
             resize_keyboard: true,
@@ -380,7 +380,7 @@ const jobReAnnouncePayment = new CronJob(
         `Cuối ngày rồi, đừng quên trả thóc ngày (${format(
           new Date(),
           'dd-MM-yyyy',
-        )}) nhé 💸💸💸`,
+        )}) nhé 🐹🐹🐹`,
         {
           reply_markup: {
             resize_keyboard: true,
