@@ -26,7 +26,7 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 bot.setMyCommands([
   {
     command: 'registerpayee',
-    description: 'Thêm vào danh sách lựa chọn người thu tiền',
+    description: 'Thêm vào danh sách lựa chọn người lụm thóc',
   },
   {
     command: 'order',
@@ -136,7 +136,7 @@ bot.onText(KEY.ORDER_LIST, async (msg) => {
 //     bot.sendChatAction(msg.chat.id, 'typing');
 //     bot.sendMessage(
 //       msg.chat.id,
-//       `Danh sách thanh toán tiền cơm ngày ${format(new Date(), 'dd-MM-yyyy')}`,
+//       `Danh sách trả thóc ngày ${format(new Date(), 'dd-MM-yyyy')}`,
 //       {
 //         reply_markup: {
 //           resize_keyboard: true,
@@ -154,7 +154,7 @@ bot.onText(KEY.SET_PAYEE, async (msg) => {
     bot.sendChatAction(msg.chat.id, 'typing');
     bot.sendMessage(
       msg.chat.id,
-      `Thiết lập người nhận tiền.\nDanh sách thành viên:`,
+      `Thiết lập người lụm thóc.\nDanh sách thành viên:`,
       {
         reply_markup: {
           resize_keyboard: true,
@@ -268,7 +268,7 @@ bot.on('callback_query', async (query) => {
         `Lêu lêu <b>${
           `@${query.from.username}` ||
           `${query.from.first_name} ${query.from.last_name}`
-        }</b>. Bạn không phải người thu tiền 🤪🤪🤪`,
+        }</b>. Bạn không phải người lụm thóc 🤪🤪🤪`,
         {
           parse_mode: 'HTML',
         },
@@ -377,7 +377,7 @@ const jobReAnnouncePayment = new CronJob(
     if (inlineKeyboard) {
       bot.sendMessage(
         GROUP_ORDER_ID,
-        `Cuối ngày rồi, đừng quên trả tiền cơm ngày (${format(
+        `Cuối ngày rồi, đừng quên trả thóc ngày (${format(
           new Date(),
           'dd-MM-yyyy',
         )}) nhé 💸💸💸`,
