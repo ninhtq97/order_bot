@@ -336,14 +336,15 @@ const jobAnnouncePayment = new CronJob(
     const isPayee = existPayeeImages['BANK'] && existPayeeImages['MOMO'];
 
     bot.sendChatAction(GROUP_ORDER_ID, 'typing');
-    if (isPayee) {
-      bot.sendMediaGroup(
-        GROUP_ORDER_ID,
-        Object.values(payeeImages).map((e) => ({ type: 'photo', media: e })),
-      );
-    }
 
     if (inlineKeyboard) {
+      if (isPayee) {
+        bot.sendMediaGroup(
+          GROUP_ORDER_ID,
+          Object.values(payeeImages).map((e) => ({ type: 'photo', media: e })),
+        );
+      }
+
       bot.sendMessage(
         GROUP_ORDER_ID,
         `Đến h lụm thóc ngày (${format(new Date(), 'dd-MM-yyyy')}) 🐹🐹🐹`,
