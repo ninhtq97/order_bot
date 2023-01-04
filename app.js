@@ -166,10 +166,13 @@ bot.onText(KEY.SET_PAYEE, async (msg) => {
 });
 
 bot.on('edited_message', async (query) => {
+  console.log('Edit Message:', query);
+
   if (new RegExp(KEY.ORDER).test(query.text)) {
     const text = query.text.replace(REGEXP_REPLACE.ORDER, ' ').trim();
     const orders = await getData(FILE_PATHS.ORDER);
 
+    orders[toOrderKey(query.from.id)] = orders[toOrderKey(query.from.id)] || {};
     orders[toOrderKey(query.from.id)].text = text;
     orders[toOrderKey(query.from.id)].name =
       query.from.username ||
