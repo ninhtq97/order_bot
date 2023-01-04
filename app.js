@@ -223,8 +223,9 @@ bot.on('callback_query', async (query) => {
       bot.sendMessage(
         query.message.chat.id,
         `Lêu lêu <b>${
-          `@${query.from.username}` ||
-          `${query.from.first_name} ${query.from.last_name}`
+          query.from.username
+            ? `@${query.from.username}`
+            : `${query.from.first_name} ${query.from.last_name}`
         }</b>. Đừng spam bot, bot tức là không cho order nhá 😜😜😜`,
         {
           parse_mode: 'HTML',
@@ -269,8 +270,9 @@ bot.on('callback_query', async (query) => {
       bot.sendMessage(
         query.message.chat.id,
         `Lêu lêu <b>${
-          `@${query.from.username}` ||
-          `${query.from.first_name} ${query.from.last_name}`
+          query.from.username
+            ? `@${query.from.username}`
+            : `${query.from.first_name} ${query.from.last_name}`
         }</b>. Bạn không phải người lụm thóc 🤪🤪🤪`,
         {
           parse_mode: 'HTML',
