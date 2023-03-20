@@ -322,28 +322,24 @@ const jobAnnouncePayment = new CronJob(
     const config = await getData(FILE_PATHS.CONFIG);
     const inlineKeyboard = await getKeyboardOrders();
 
-    const existPayeeImages = { BANK: false, MOMO: false };
-    const payeeImages = {
-      BANK: `${DIR_PATHS.IMAGES}/${config.payee.id}_bank.jpg`,
-      MOMO: `${DIR_PATHS.IMAGES}/${config.payee.id}_momo.jpg`,
-    };
+    const payeeImages = {};
 
     try {
-      await fs.access(payeeImages.BANK, constants.R_OK);
-      existPayeeImages['BANK'] = true;
+      const qrBankPath = `${DIR_PATHS.IMAGES}/${config.payee.id}_bank.jpg`;
+      await fs.access(qrBankPath, constants.R_OK);
+      payeeImages['BANK'] = qrBankPath;
     } catch (error) {}
 
     try {
-      await fs.access(payeeImages.MOMO, constants.R_OK);
-      existPayeeImages['MOMO'] = true;
+      const qrMomoPath = `${DIR_PATHS.IMAGES}/${config.payee.id}_momo.jpg`;
+      await fs.access(qrMomoPath, constants.R_OK);
+      payeeImages['MOMO'] = qrMomoPath;
     } catch (error) {}
-
-    const isPayee = existPayeeImages['BANK'] && existPayeeImages['MOMO'];
 
     bot.sendChatAction(GROUP_ORDER_ID, 'typing');
 
     if (inlineKeyboard) {
-      if (isPayee) {
+      if (Object.values(payeeImages).length) {
         bot.sendMediaGroup(
           GROUP_ORDER_ID,
           Object.values(payeeImages).map((e) => ({ type: 'photo', media: e })),
