@@ -185,7 +185,7 @@ bot.on('callback_query', async (query) => {
     if (isOwner) {
       const orders = await getData(FILE_PATHS.ORDER);
 
-      if (orders.length) {
+      if (Object.keys(orders).length) {
         orders[userPaid].paid = !orders[userPaid].paid;
 
         const resUpdate = await updateData(FILE_PATHS.ORDER, orders);
@@ -232,7 +232,7 @@ bot.on('callback_query', async (query) => {
       const userPaid = query.data.replace(REGEXP_REPLACE.RECEIVED, ' ').trim();
 
       const orders = await getData(FILE_PATHS.ORDER);
-      if (orders.length) {
+      if (Object.keys(orders).length) {
         orders[userPaid].received = !orders[userPaid].received;
         orders[userPaid].paid = orders[userPaid].received;
 
