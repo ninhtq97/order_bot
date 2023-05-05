@@ -18,6 +18,8 @@ const {
   getKeyboardPayeeMembers,
   updateData,
   toOrderKey,
+  getName,
+  getViewName,
 } = require('./utils');
 const CronJob = require('cron').CronJob;
 
@@ -72,25 +74,17 @@ bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
   if (!member) {
     members.push({
       id: msg.from.id,
-      name:
-        msg.from.username ||
-        `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim(),
+      name: getName(msg.from),
     });
     await updateData(FILE_PATHS.MEMBER, members);
     bot.sendMessage(
       msg.chat.id,
-      `Đã thêm ${
-        `@${msg.from.username}` ||
-        `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim()
-      } vào danh sách`,
+      `Đã thêm ${getViewName(msg.from)} vào danh sách`,
     );
   } else {
     bot.sendMessage(
       msg.chat.id,
-      `${
-        `@${msg.from.username}` ||
-        `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim()
-      } đã có trong danh sách`,
+      `${getViewName(msg.from)} đã có trong danh sách`,
     );
   }
 });
@@ -99,9 +93,7 @@ bot.onText(KEY.ORDER, async (msg, match) => {
   const orders = await getData(FILE_PATHS.ORDER);
 
   orders[toOrderKey(msg.from.id)] = {
-    name:
-      msg.from.username ||
-      `${msg.from.first_name || ''} ${msg.from.last_name || ''}`.trim(),
+    name: getName(msg.from),
     text: match[2],
     paid: false,
     received: false,
@@ -174,9 +166,7 @@ bot.on('edited_message', async (query) => {
 
     orders[toOrderKey(query.from.id)] = orders[toOrderKey(query.from.id)] || {};
     orders[toOrderKey(query.from.id)].text = text;
-    orders[toOrderKey(query.from.id)].name =
-      query.from.username ||
-      `${query.from.first_name || ''} ${query.from.last_name || ''}`.trim();
+    orders[toOrderKey(query.from.id)].name = getName(query.from);
 
     await updateData(FILE_PATHS.ORDER, orders);
   }
@@ -222,11 +212,9 @@ bot.on('callback_query', async (query) => {
       bot.sendChatAction(query.message.chat.id, 'typing');
       bot.sendMessage(
         query.message.chat.id,
-        `Lêu lêu <b>${
-          query.from.username
-            ? `@${query.from.username}`
-            : `${query.from.first_name || ''} ${query.from.last_name || ''}`
-        }</b>. Đừng spam bot, bot tức là không cho order nhá 😜😜😜`,
+        `Lêu lêu <b>${getViewName(
+          query.from,
+        )}</b>. Đừng spam bot, bot tức là không cho order nhá 😜😜😜`,
         {
           parse_mode: 'HTML',
         },
@@ -242,6 +230,7 @@ bot.on('callback_query', async (query) => {
 
       const orders = await getData(FILE_PATHS.ORDER);
       orders[userPaid].received = !orders[userPaid].received;
+      orders[userPaid].paid = orders[userPaid].received;
 
       const resUpdate = await updateData(FILE_PATHS.ORDER, orders);
       if (resUpdate) {
@@ -252,6 +241,11 @@ bot.on('callback_query', async (query) => {
                 ? {
                     ...x,
                     text: `Đã nhận ${orders[userPaid].received ? '✅' : '❌'} `,
+                  }
+                : new RegExp(REGEXP_REPLACE.PAID).test(x.callback_data)
+                ? {
+                    ...x,
+                    text: `Đã gửi ${orders[userPaid].paid ? '✅' : '❌'} `,
                   }
                 : x,
             ),
@@ -269,11 +263,9 @@ bot.on('callback_query', async (query) => {
       bot.sendChatAction(query.message.chat.id, 'typing');
       bot.sendMessage(
         query.message.chat.id,
-        `Lêu lêu <b>${
-          query.from.username
-            ? `@${query.from.username}`
-            : `${query.from.first_name || ''} ${query.from.last_name || ''}`
-        }</b>. Bạn không phải người lụm thóc 🤪🤪🤪`,
+        `Lêu lêu <b>${getViewName(
+          query.from,
+        )}</b>. Bạn không phải người lụm thóc 🤪🤪🤪`,
         {
           parse_mode: 'HTML',
         },

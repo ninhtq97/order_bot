@@ -3,6 +3,14 @@ const { FILE_PATHS } = require('../constants');
 
 exports.toOrderKey = (owner) => `o:${owner}`;
 
+exports.getViewName = (user) =>
+  user.username
+    ? `@${user.username}`
+    : `${user.first_name || ''} ${user.last_name || ''}`.trim();
+
+exports.getName = (user) =>
+  user.username || `${user.first_name || ''} ${user.last_name || ''}`.trim();
+
 exports.getData = async (path) => {
   const data = await fs.readFile(path);
   return JSON.parse(data);
