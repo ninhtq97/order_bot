@@ -184,29 +184,32 @@ bot.on('callback_query', async (query) => {
 
     if (isOwner) {
       const orders = await getData(FILE_PATHS.ORDER);
-      orders[userPaid].paid = !orders[userPaid].paid;
 
-      const resUpdate = await updateData(FILE_PATHS.ORDER, orders);
-      if (resUpdate) {
-        const replyMarkup = query.message.reply_markup.inline_keyboard.map(
-          (e) =>
-            e.map((x) =>
-              x.callback_data === query.data
-                ? {
-                    ...x,
-                    text: `Đã gửi ${orders[userPaid].paid ? '✅' : '❌'} `,
-                  }
-                : x,
-            ),
-        );
+      if (orders.length) {
+        orders[userPaid].paid = !orders[userPaid].paid;
 
-        bot.editMessageReplyMarkup(
-          { inline_keyboard: replyMarkup },
-          {
-            chat_id: query.message.chat.id,
-            message_id: query.message.message_id,
-          },
-        );
+        const resUpdate = await updateData(FILE_PATHS.ORDER, orders);
+        if (resUpdate) {
+          const replyMarkup = query.message.reply_markup.inline_keyboard.map(
+            (e) =>
+              e.map((x) =>
+                x.callback_data === query.data
+                  ? {
+                      ...x,
+                      text: `Đã gửi ${orders[userPaid].paid ? '✅' : '❌'} `,
+                    }
+                  : x,
+              ),
+          );
+
+          bot.editMessageReplyMarkup(
+            { inline_keyboard: replyMarkup },
+            {
+              chat_id: query.message.chat.id,
+              message_id: query.message.message_id,
+            },
+          );
+        }
       }
     } else {
       bot.sendChatAction(query.message.chat.id, 'typing');
@@ -229,35 +232,39 @@ bot.on('callback_query', async (query) => {
       const userPaid = query.data.replace(REGEXP_REPLACE.RECEIVED, ' ').trim();
 
       const orders = await getData(FILE_PATHS.ORDER);
-      orders[userPaid].received = !orders[userPaid].received;
-      orders[userPaid].paid = orders[userPaid].received;
+      if (orders.length) {
+        orders[userPaid].received = !orders[userPaid].received;
+        orders[userPaid].paid = orders[userPaid].received;
 
-      const resUpdate = await updateData(FILE_PATHS.ORDER, orders);
-      if (resUpdate) {
-        const replyMarkup = query.message.reply_markup.inline_keyboard.map(
-          (e) =>
-            e.map((x) =>
-              x.callback_data === query.data
-                ? {
-                    ...x,
-                    text: `Đã nhận ${orders[userPaid].received ? '✅' : '❌'} `,
-                  }
-                : new RegExp(REGEXP_REPLACE.PAID).test(x.callback_data)
-                ? {
-                    ...x,
-                    text: `Đã gửi ${orders[userPaid].paid ? '✅' : '❌'} `,
-                  }
-                : x,
-            ),
-        );
+        const resUpdate = await updateData(FILE_PATHS.ORDER, orders);
+        if (resUpdate) {
+          const replyMarkup = query.message.reply_markup.inline_keyboard.map(
+            (e) =>
+              e.map((x) =>
+                x.callback_data === query.data
+                  ? {
+                      ...x,
+                      text: `Đã nhận ${
+                        orders[userPaid].received ? '✅' : '❌'
+                      } `,
+                    }
+                  : new RegExp(REGEXP_REPLACE.PAID).test(x.callback_data)
+                  ? {
+                      ...x,
+                      text: `Đã gửi ${orders[userPaid].paid ? '✅' : '❌'} `,
+                    }
+                  : x,
+              ),
+          );
 
-        bot.editMessageReplyMarkup(
-          { inline_keyboard: replyMarkup },
-          {
-            chat_id: query.message.chat.id,
-            message_id: query.message.message_id,
-          },
-        );
+          bot.editMessageReplyMarkup(
+            { inline_keyboard: replyMarkup },
+            {
+              chat_id: query.message.chat.id,
+              message_id: query.message.message_id,
+            },
+          );
+        }
       }
     } else {
       bot.sendChatAction(query.message.chat.id, 'typing');
