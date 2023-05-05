@@ -248,7 +248,7 @@ bot.on('callback_query', async (query) => {
                         orders[userPaid].received ? '✅' : '❌'
                       } `,
                     }
-                  : new RegExp(REGEXP_REPLACE.PAID).test(x.callback_data)
+                  : new RegExp(`paid ${userPaid}`).test(x.callback_data)
                   ? {
                       ...x,
                       text: `Đã gửi ${orders[userPaid].paid ? '✅' : '❌'} `,
