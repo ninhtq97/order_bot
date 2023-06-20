@@ -315,6 +315,22 @@ bot.on('callback_query', async (query) => {
   }
 });
 
+const jobOrder = new CronJob(
+  '40 10 * * 1-5',
+  async () => {
+    bot.sendChatAction(GROUP_ORDER_ID, 'typing');
+    bot.sendMessage(
+      GROUP_ORDER_ID,
+      `Nhắc nhẹ: Order cơm thôi kẻo đói mn ơi 🍚🍚🍚`,
+    );
+  },
+  null,
+  true,
+  'Asia/Ho_Chi_Minh',
+);
+
+jobOrder.start();
+
 const jobAnnouncePayment = new CronJob(
   '0 15 * * 1-5',
   async function () {
