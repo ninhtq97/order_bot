@@ -323,7 +323,7 @@ const jobOrder = new CronJob(
       GROUP_ORDER_ID,
       `Nhắc nhẹ: Order cơm thôi kẻo đói mn ơi 🍚🍚🍚`,
     );
-    bot.sendMessage(msg.chat.id, 'https://t.me/datcomt12/2521');
+    bot.sendMessage(GROUP_ORDER_ID, 'https://t.me/datcomt12/2521');
   },
   null,
   true,
