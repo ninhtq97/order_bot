@@ -316,7 +316,7 @@ bot.on('callback_query', async (query) => {
 });
 
 const jobOrder = new CronJob(
-  '40 10 * * 1-5',
+  '30 10 * * 1-5',
   async () => {
     bot.sendChatAction(GROUP_ORDER_ID, 'typing');
     bot.sendMessage(
@@ -328,8 +328,6 @@ const jobOrder = new CronJob(
   true,
   'Asia/Ho_Chi_Minh',
 );
-
-jobOrder.start();
 
 const jobAnnouncePayment = new CronJob(
   '0 15 * * 1-5',
@@ -378,8 +376,6 @@ const jobAnnouncePayment = new CronJob(
   'Asia/Ho_Chi_Minh',
 );
 
-jobAnnouncePayment.start();
-
 const jobReAnnouncePayment = new CronJob(
   '0 17 * * 1-5',
   async function () {
@@ -412,8 +408,6 @@ const jobReAnnouncePayment = new CronJob(
   'Asia/Ho_Chi_Minh',
 );
 
-jobReAnnouncePayment.start();
-
 const jobClean = new CronJob(
   '0 0 * * *',
   async function () {
@@ -423,5 +417,3 @@ const jobClean = new CronJob(
   true,
   'Asia/Ho_Chi_Minh',
 );
-
-jobClean.start();
