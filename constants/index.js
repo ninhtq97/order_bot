@@ -12,7 +12,7 @@ exports.REGEXP_REPLACE = {
 };
 
 exports.KEY = {
-  ORDER: /(\/order@ninhtq_bot|\/order@t12_order_bot|\/order) (.+)/,
+  ORDER: /((\/order@(.+?)|\/order) (.+))/,
   ORDER_LIST: /\/orderlist/,
   PAY_LIST: /\/paylist/,
   REGISTER_PAYEE: /\/registerpayee/,
