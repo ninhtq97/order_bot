@@ -94,7 +94,7 @@ bot.onText(KEY.ORDER, async (msg, match) => {
 
   orders[toOrderKey(msg.from.id)] = {
     name: getName(msg.from),
-    text: match[2],
+    text: match[4],
     paid: false,
     received: false,
   };
