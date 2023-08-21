@@ -5,7 +5,7 @@ const { format } = require('date-fns');
 const {
   KEY,
   BOT_TOKEN,
-  GROUP_ORDER_ID,
+  GROUP_ID,
   FILE_PATHS,
   INIT_DATA,
   REGEXP_REPLACE,
@@ -318,12 +318,9 @@ bot.on('callback_query', async (query) => {
 const jobOrder = new CronJob(
   '30 10 * * 1-5',
   async () => {
-    bot.sendChatAction(GROUP_ORDER_ID, 'typing');
-    bot.sendMessage(
-      GROUP_ORDER_ID,
-      `Nhắc nhẹ: Order cơm thôi kẻo đói mn ơi 🍚🍚🍚`,
-    );
-    bot.sendMessage(GROUP_ORDER_ID, 'https://t.me/datcomt12/2521');
+    bot.sendChatAction(GROUP_ID, 'typing');
+    bot.sendMessage(GROUP_ID, `Nhắc nhẹ: Order cơm thôi kẻo đói mn ơi 🍚🍚🍚`);
+    bot.sendMessage(GROUP_ID, 'https://t.me/datcomt12/2521');
   },
   null,
   true,
@@ -350,18 +347,18 @@ const jobAnnouncePayment = new CronJob(
       payeeImages['MOMO'] = qrMomoPath;
     } catch (error) {}
 
-    bot.sendChatAction(GROUP_ORDER_ID, 'typing');
+    bot.sendChatAction(GROUP_ID, 'typing');
 
     if (inlineKeyboard) {
       if (Object.values(payeeImages).length) {
         bot.sendMediaGroup(
-          GROUP_ORDER_ID,
+          GROUP_ID,
           Object.values(payeeImages).map((e) => ({ type: 'photo', media: e })),
         );
       }
 
       bot.sendMessage(
-        GROUP_ORDER_ID,
+        GROUP_ID,
         `Đến h lụm thóc ngày (${format(new Date(), 'dd-MM-yyyy')}) 🐹🐹🐹`,
         {
           reply_markup: {
@@ -390,7 +387,7 @@ const jobReAnnouncePayment = new CronJob(
 
     if (inlineKeyboard) {
       bot.sendMessage(
-        GROUP_ORDER_ID,
+        GROUP_ID,
         `Cuối ngày rồi, đừng quên trả thóc ngày (${format(
           new Date(),
           'dd-MM-yyyy',
