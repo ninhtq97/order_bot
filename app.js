@@ -1,7 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs/promises');
 const { constants } = require('fs');
-const { format } = require('date-fns');
+const { format, isEqual, startOfDay } = require('date-fns');
 const {
   KEY,
   BOT_TOKEN,
@@ -227,19 +227,48 @@ bot.on('callback_query', async (query) => {
 
   if (new RegExp(REGEX_CALLBACK.RECEIVED).test(query.data)) {
     const config = await getData(FILE_PATHS.CONFIG);
+    const userPaid = query.data.replace(REGEXP_REPLACE.RECEIVED, ' ').trim();
 
     if (query.from.id === config.payee.id) {
-      const userPaid = query.data.replace(REGEXP_REPLACE.RECEIVED, ' ').trim();
+      let replyMarkup = null;
+      let isUpdated = true;
+      if (
+        !isEqual(
+          startOfDay(new Date(query.message.date * 1000)),
+          startOfDay(new Date()),
+        )
+      ) {
+        const oldContent = JSON.stringify(
+          query.message.reply_markup.inline_keyboard,
+        );
+        replyMarkup = query.message.reply_markup.inline_keyboard.map((e) =>
+          e.map((x) =>
+            x.callback_data === query.data
+              ? {
+                  ...x,
+                  text: `Đã nhận ✅ `,
+                }
+              : new RegExp(`paid ${userPaid}`).test(x.callback_data)
+              ? {
+                  ...x,
+                  text: `Đã gửi ✅ `,
+                }
+              : x,
+          ),
+        );
+        const newContent = JSON.stringify(
+          query.message.reply_markup.inline_keyboard,
+        );
+        if (oldContent === newContent) isUpdated = false;
+      } else {
+        const orders = await getData(FILE_PATHS.ORDER);
+        if (Object.keys(orders).length) {
+          orders[userPaid].received = !orders[userPaid].received;
+          orders[userPaid].paid = orders[userPaid].received;
 
-      const orders = await getData(FILE_PATHS.ORDER);
-      if (Object.keys(orders).length) {
-        orders[userPaid].received = !orders[userPaid].received;
-        orders[userPaid].paid = orders[userPaid].received;
-
-        const resUpdate = await updateData(FILE_PATHS.ORDER, orders);
-        if (resUpdate) {
-          const replyMarkup = query.message.reply_markup.inline_keyboard.map(
-            (e) =>
+          const resUpdate = await updateData(FILE_PATHS.ORDER, orders);
+          if (resUpdate) {
+            replyMarkup = query.message.reply_markup.inline_keyboard.map((e) =>
               e.map((x) =>
                 x.callback_data === query.data
                   ? {
@@ -255,16 +284,19 @@ bot.on('callback_query', async (query) => {
                     }
                   : x,
               ),
-          );
-
-          bot.editMessageReplyMarkup(
-            { inline_keyboard: replyMarkup },
-            {
-              chat_id: query.message.chat.id,
-              message_id: query.message.message_id,
-            },
-          );
+            );
+          }
         }
+      }
+
+      if (replyMarkup && isUpdated) {
+        bot.editMessageReplyMarkup(
+          { inline_keyboard: replyMarkup },
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+          },
+        );
       }
     } else {
       bot.sendChatAction(query.message.chat.id, 'typing');
