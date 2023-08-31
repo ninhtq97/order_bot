@@ -38,6 +38,10 @@ bot.setMyCommands([
     command: 'orderlist',
     description: 'Danh sách đặt cơm',
   },
+  {
+    command: 'cancel',
+    description: 'Huỷ đặt cơm',
+  },
 ]);
 
 (async () => {
@@ -101,14 +105,29 @@ bot.onText(KEY.ORDER, async (msg, match) => {
     }
   }
 
-  for (const order of match.input.split('/order')) {
-    if (!order.trim()) continue;
+  const newOrders = match.input.split('/order').filter((o) => !!o);
+  for (const order of newOrders) {
     orders[toOrderKey(msg.from.id)] = {
       name: getName(msg.from),
       text: order.trim(),
       paid: false,
       received: false,
     };
+  }
+
+  await updateData(FILE_PATHS.ORDER, orders);
+});
+
+bot.onText(KEY.CANCEL, async (msg, match) => {
+  const orders = await getData(FILE_PATHS.ORDER);
+
+  const deletedKeys = Object.keys(orders).filter((k) =>
+    k.includes(`o:${msg.from.id}`),
+  );
+  if (deletedKeys.length) {
+    for (const old of deletedKeys) {
+      delete orders[old];
+    }
   }
 
   await updateData(FILE_PATHS.ORDER, orders);
@@ -185,15 +204,33 @@ bot.on('edited_message', async (query) => {
       k.includes(`o:${query.from.id}`),
     );
     let stt = 0;
-    for (const order of text.split('/order')) {
-      if (!order.trim()) continue;
-      orders[keys[stt]] = {
-        name: getName(query.from),
-        text: order.trim(),
-        paid: false,
-        received: false,
-      };
-      stt++;
+    const newOrders = text.split('/order').filter((o) => !!o);
+
+    if (newOrders.length != keys.length) {
+      //get new identity number
+      for (const old of keys) {
+        delete orders[old];
+      }
+
+      for (const order of newOrders) {
+        orders[toOrderKey(query.from.id)] = {
+          name: getName(query.from),
+          text: order.trim(),
+          paid: false,
+          received: false,
+        };
+      }
+    } else {
+      //edit ordered items
+      for (const order of newOrders) {
+        orders[keys[stt]] = {
+          name: getName(query.from),
+          text: order.trim(),
+          paid: false,
+          received: false,
+        };
+        stt++;
+      }
     }
 
     await updateData(FILE_PATHS.ORDER, orders);

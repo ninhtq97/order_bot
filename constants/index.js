@@ -21,6 +21,7 @@ exports.KEY = {
   PAY_LIST: /\/paylist/,
   REGISTER_PAYEE: /\/registerpayee/,
   SET_PAYEE: /\/setpayee/,
+  CANCEL: /\/cancel/,
 };
 
 exports.GROUP_ID = process.env.GROUP_ID;
