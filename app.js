@@ -131,6 +131,14 @@ bot.onText(KEY.CANCEL, async (msg, match) => {
   }
 
   await updateData(FILE_PATHS.ORDER, orders);
+
+  bot.sendChatAction(GROUP_ID, 'typing');
+  bot.sendMessage(
+    GROUP_ID,
+    `${getName(
+      msg.from,
+    )}, mời nộp 5 chục để huỷ đặt cơm. Phím sa, gà đã luộc :):)`,
+  );
 });
 
 bot.onText(KEY.ORDER_LIST, async (msg) => {
