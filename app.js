@@ -92,12 +92,24 @@ bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
 bot.onText(KEY.ORDER, async (msg, match) => {
   const orders = await getData(FILE_PATHS.ORDER);
 
-  orders[toOrderKey(msg.from.id)] = {
-    name: getName(msg.from),
-    text: match[4],
-    paid: false,
-    received: false,
-  };
+  const deletedKeys = Object.keys(orders).filter((k) =>
+    k.includes(`o:${msg.from.id}`),
+  );
+  if (deletedKeys.length) {
+    for (const old of deletedKeys) {
+      delete orders[old];
+    }
+  }
+
+  for (const order of match.input.split('/order')) {
+    if (!order.trim()) continue;
+    orders[toOrderKey(msg.from.id)] = {
+      name: getName(msg.from),
+      text: order.trim(),
+      paid: false,
+      received: false,
+    };
+  }
 
   await updateData(FILE_PATHS.ORDER, orders);
 });
@@ -161,12 +173,28 @@ bot.on('edited_message', async (query) => {
   console.log('Edit Message:', query);
 
   if (new RegExp(KEY.ORDER).test(query.text)) {
-    const text = query.text.replace(REGEXP_REPLACE.ORDER, ' ').trim();
     const orders = await getData(FILE_PATHS.ORDER);
+    //const text = query.text.replace(REGEXP_REPLACE.ORDER, ' ').trim();
 
-    orders[toOrderKey(query.from.id)] = orders[toOrderKey(query.from.id)] || {};
-    orders[toOrderKey(query.from.id)].text = text;
-    orders[toOrderKey(query.from.id)].name = getName(query.from);
+    // orders[toOrderKey(query.from.id)] = orders[toOrderKey(query.from.id)] || {};
+    // orders[toOrderKey(query.from.id)].text = text;
+    // orders[toOrderKey(query.from.id)].name = getName(query.from);
+
+    const text = query.text.trim();
+    const keys = Object.keys(orders).filter((k) =>
+      k.includes(`o:${query.from.id}`),
+    );
+    let stt = 0;
+    for (const order of text.split('/order')) {
+      if (!order.trim()) continue;
+      orders[keys[stt]] = {
+        name: getName(query.from),
+        text: order.trim(),
+        paid: false,
+        received: false,
+      };
+      stt++;
+    }
 
     await updateData(FILE_PATHS.ORDER, orders);
   }
@@ -179,8 +207,7 @@ bot.on('callback_query', async (query) => {
     const config = await getData(FILE_PATHS.CONFIG);
     const userPaid = query.data.replace(REGEXP_REPLACE.PAID, ' ').trim();
     const isOwner =
-      toOrderKey(query.from.id) === userPaid ||
-      query.from.id === config.payee.id;
+      userPaid.includes(query.from.id) || query.from.id === config.payee.id;
 
     if (isOwner) {
       const orders = await getData(FILE_PATHS.ORDER);
@@ -256,9 +283,7 @@ bot.on('callback_query', async (query) => {
               : x,
           ),
         );
-        const newContent = JSON.stringify(
-          query.message.reply_markup.inline_keyboard,
-        );
+        const newContent = JSON.stringify(replyMarkup);
         if (oldContent === newContent) isUpdated = false;
       } else {
         const orders = await getData(FILE_PATHS.ORDER);

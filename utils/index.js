@@ -1,7 +1,10 @@
 const fs = require('fs/promises');
 const { FILE_PATHS } = require('../constants');
 
-exports.toOrderKey = (owner) => `o:${owner}`;
+exports.toOrderKey = (owner) =>
+  `o:${owner}:${Math.round(Math.random() * Math.pow(10, 5))
+    .toString()
+    .padStart(5, 0)}`;
 
 exports.getViewName = (user) =>
   user.username
