@@ -20,6 +20,7 @@ const {
   toOrderKey,
   getName,
   getViewName,
+  findOrderKey,
 } = require('./utils');
 const CronJob = require('cron').CronJob;
 
@@ -97,7 +98,7 @@ bot.onText(KEY.ORDER, async (msg, match) => {
   const orders = await getData(FILE_PATHS.ORDER);
 
   const deletedKeys = Object.keys(orders).filter((k) =>
-    k.includes(`o:${msg.from.id}`),
+    k.includes(findOrderKey(msg.from.id)),
   );
   if (deletedKeys.length) {
     for (const old of deletedKeys) {
@@ -122,12 +123,15 @@ bot.onText(KEY.CANCEL, async (msg, match) => {
   const orders = await getData(FILE_PATHS.ORDER);
 
   const deletedKeys = Object.keys(orders).filter((k) =>
-    k.includes(`o:${msg.from.id}`),
+    k.includes(findOrderKey(msg.from.id)),
   );
+
   if (deletedKeys.length) {
     for (const old of deletedKeys) {
       delete orders[old];
     }
+  } else {
+    return;
   }
 
   await updateData(FILE_PATHS.ORDER, orders);
@@ -209,7 +213,7 @@ bot.on('edited_message', async (query) => {
 
     const text = query.text.trim();
     const keys = Object.keys(orders).filter((k) =>
-      k.includes(`o:${query.from.id}`),
+      k.includes(findOrderKey(query.from.id)),
     );
     let stt = 0;
     const newOrders = text.split('/order').filter((o) => !!o);

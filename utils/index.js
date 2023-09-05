@@ -6,6 +6,8 @@ exports.toOrderKey = (owner) =>
     .toString()
     .padStart(5, 0)}`;
 
+exports.findOrderKey = (owner) => `o:${owner}`;
+
 exports.getViewName = (user) =>
   user.username
     ? `@${user.username}`
