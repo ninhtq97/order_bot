@@ -139,9 +139,8 @@ bot.onText(KEY.CANCEL, async (msg, match) => {
   bot.sendChatAction(GROUP_ID, 'typing');
   bot.sendMessage(
     GROUP_ID,
-    `${getName(
-      msg.from,
-    )}, mời nộp 5 chục để huỷ đặt cơm. Phím sa, gà đã luộc :):)`,
+    `${getName(msg.from)}, mời nộp 5 chục để huỷ đặt cơm :):)`,
+    // Phím sa, gà đã luộc :):)
   );
 });
 
