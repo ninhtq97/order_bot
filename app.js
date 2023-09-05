@@ -20,6 +20,7 @@ const {
   toOrderKey,
   getName,
   getViewName,
+  findOrderKey,
 } = require('./utils');
 const CronJob = require('cron').CronJob;
 
@@ -37,6 +38,10 @@ bot.setMyCommands([
   {
     command: 'orderlist',
     description: 'Danh sách đặt cơm',
+  },
+  {
+    command: 'cancel',
+    description: 'Huỷ đặt cơm',
   },
 ]);
 
@@ -92,14 +97,52 @@ bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
 bot.onText(KEY.ORDER, async (msg, match) => {
   const orders = await getData(FILE_PATHS.ORDER);
 
-  orders[toOrderKey(msg.from.id)] = {
-    name: getName(msg.from),
-    text: match[4],
-    paid: false,
-    received: false,
-  };
+  const deletedKeys = Object.keys(orders).filter((k) =>
+    k.includes(findOrderKey(msg.from.id)),
+  );
+  if (deletedKeys.length) {
+    for (const old of deletedKeys) {
+      delete orders[old];
+    }
+  }
+
+  const newOrders = match.input.split('/order').filter((o) => !!o);
+  for (const order of newOrders) {
+    orders[toOrderKey(msg.from.id)] = {
+      name: getName(msg.from),
+      text: order.trim(),
+      paid: false,
+      received: false,
+    };
+  }
 
   await updateData(FILE_PATHS.ORDER, orders);
+});
+
+bot.onText(KEY.CANCEL, async (msg, match) => {
+  const orders = await getData(FILE_PATHS.ORDER);
+
+  const deletedKeys = Object.keys(orders).filter((k) =>
+    k.includes(findOrderKey(msg.from.id)),
+  );
+
+  if (deletedKeys.length) {
+    for (const old of deletedKeys) {
+      delete orders[old];
+    }
+  } else {
+    return;
+  }
+
+  await updateData(FILE_PATHS.ORDER, orders);
+
+  bot.sendChatAction(GROUP_ID, 'typing');
+  bot.sendMessage(
+    GROUP_ID,
+    `${getName(
+      msg.from,
+    )}, mời nộp 5 chục để huỷ đặt cơm. Phím sa, gà đã luộc :):)`,
+  );
 });
 
 bot.onText(KEY.ORDER_LIST, async (msg) => {
@@ -161,12 +204,46 @@ bot.on('edited_message', async (query) => {
   console.log('Edit Message:', query);
 
   if (new RegExp(KEY.ORDER).test(query.text)) {
-    const text = query.text.replace(REGEXP_REPLACE.ORDER, ' ').trim();
     const orders = await getData(FILE_PATHS.ORDER);
+    //const text = query.text.replace(REGEXP_REPLACE.ORDER, ' ').trim();
 
-    orders[toOrderKey(query.from.id)] = orders[toOrderKey(query.from.id)] || {};
-    orders[toOrderKey(query.from.id)].text = text;
-    orders[toOrderKey(query.from.id)].name = getName(query.from);
+    // orders[toOrderKey(query.from.id)] = orders[toOrderKey(query.from.id)] || {};
+    // orders[toOrderKey(query.from.id)].text = text;
+    // orders[toOrderKey(query.from.id)].name = getName(query.from);
+
+    const text = query.text.trim();
+    const keys = Object.keys(orders).filter((k) =>
+      k.includes(findOrderKey(query.from.id)),
+    );
+    let stt = 0;
+    const newOrders = text.split('/order').filter((o) => !!o);
+
+    if (newOrders.length != keys.length) {
+      //get new identity number
+      for (const old of keys) {
+        delete orders[old];
+      }
+
+      for (const order of newOrders) {
+        orders[toOrderKey(query.from.id)] = {
+          name: getName(query.from),
+          text: order.trim(),
+          paid: false,
+          received: false,
+        };
+      }
+    } else {
+      //edit ordered items
+      for (const order of newOrders) {
+        orders[keys[stt]] = {
+          name: getName(query.from),
+          text: order.trim(),
+          paid: false,
+          received: false,
+        };
+        stt++;
+      }
+    }
 
     await updateData(FILE_PATHS.ORDER, orders);
   }
@@ -179,8 +256,7 @@ bot.on('callback_query', async (query) => {
     const config = await getData(FILE_PATHS.CONFIG);
     const userPaid = query.data.replace(REGEXP_REPLACE.PAID, ' ').trim();
     const isOwner =
-      toOrderKey(query.from.id) === userPaid ||
-      query.from.id === config.payee.id;
+      userPaid.includes(query.from.id) || query.from.id === config.payee.id;
 
     if (isOwner) {
       const orders = await getData(FILE_PATHS.ORDER);
@@ -256,9 +332,7 @@ bot.on('callback_query', async (query) => {
               : x,
           ),
         );
-        const newContent = JSON.stringify(
-          query.message.reply_markup.inline_keyboard,
-        );
+        const newContent = JSON.stringify(replyMarkup);
         if (oldContent === newContent) isUpdated = false;
       } else {
         const orders = await getData(FILE_PATHS.ORDER);
