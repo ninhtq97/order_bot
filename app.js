@@ -106,7 +106,9 @@ bot.onText(KEY.ORDER, async (msg, match) => {
     }
   }
 
-  const newOrders = match.input.split('/order').filter((o) => !!o);
+  const newOrders = match.input
+    .split(new RegExp(KEY.GET_ORDER))
+    .filter((o) => !!o);
   for (const order of newOrders) {
     orders[toOrderKey(msg.from.id)] = {
       name: getName(msg.from),
@@ -218,7 +220,7 @@ bot.on('edited_message', async (query) => {
       k.includes(findOrderKey(query.from.id)),
     );
     let stt = 0;
-    const newOrders = text.split('/order').filter((o) => !!o);
+    const newOrders = text.split(new RegExp(KEY.GET_ORDER)).filter((o) => !!o);
 
     if (newOrders.length != keys.length) {
       //get new identity number
