@@ -16,7 +16,8 @@ exports.REGEXP_REPLACE = {
 };
 
 exports.KEY = {
-  ORDER: /((\/order@(.+?)|\/order) (.+))/,
+  ORDER: /((\/order@(.+?)|\/order) (.+))/i,
+  GET_ORDER: /\/order/i,
   ORDER_LIST: /\/orderlist/,
   PAY_LIST: /\/paylist/,
   REGISTER_PAYEE: /\/registerpayee/,
