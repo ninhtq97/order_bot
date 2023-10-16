@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node ./app.js"
+    "start": "nodemon ./app.js -e js"
   },
   "keywords": [],
   "author": "",
@@ -14,5 +14,8 @@
     "date-fns": "^2.29.3",
     "dotenv": "^16.3.1",
     "node-telegram-bot-api": "^0.61.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   }
 }
