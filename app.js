@@ -67,8 +67,32 @@ bot.setMyCommands([
   }
 })();
 
+bot.on('polling_error', (err) => {
+  console.log(err);
+});
+
 bot.on('message', (msg) => {
   console.log('Message:', msg);
+  // console.log('1:::: ', msg.text.split(new RegExp(KEY.GET_ORDER)));
+  // console.log('2:::: ', msg.text.split('/'));
+
+  //validate order(s)
+  if (
+    /\/order(.+)/i.test(msg.text) &&
+    !KEY.ORDER_LIST.test(msg.text) &&
+    msg.text.split(new RegExp(KEY.GET_ORDER)).length !=
+      msg.text.split('/').length
+  ) {
+    console.log('wrong order');
+    bot.sendChatAction(msg.chat.id, 'typing');
+    bot.sendMessage(
+      msg.chat.id,
+      `Order sai cú pháp rồi kìa, <b>${getName(msg.from)}</b> ơi.🤪liu liu🤪`,
+      {
+        parse_mode: 'HTML',
+      },
+    );
+  }
 });
 
 bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
@@ -95,28 +119,60 @@ bot.onText(KEY.REGISTER_PAYEE, async (msg) => {
 });
 
 bot.onText(KEY.ORDER, async (msg, match) => {
+  //validate order(s)
+  if (
+    msg.text.split(new RegExp(KEY.GET_ORDER)).length !=
+    msg.text.split('/').length
+  ) {
+    return;
+  }
+
   const orders = await getData(FILE_PATHS.ORDER);
 
-  const deletedKeys = Object.keys(orders).filter((k) =>
+  const oldOrderNos = Object.keys(orders).filter((k) =>
     k.includes(findOrderKey(msg.from.id)),
   );
-  if (deletedKeys.length) {
-    for (const old of deletedKeys) {
-      delete orders[old];
-    }
-  }
 
   const newOrders = match.input
     .split(new RegExp(KEY.GET_ORDER))
-    .filter((o) => !!o);
-  for (const order of newOrders) {
-    orders[toOrderKey(msg.from.id)] = {
-      name: getName(msg.from),
-      text: order.trim(),
-      paid: false,
-      received: false,
-    };
+    .filter((o) => !!o.trim());
+
+  if (oldOrderNos.length != newOrders.length) {
+    for (const old of oldOrderNos) {
+      delete orders[old];
+    }
+
+    for (const order of newOrders) {
+      orders[toOrderKey(msg.from.id)] = {
+        name: getName(msg.from),
+        text: order.trim(),
+        paid: false,
+        received: false,
+      };
+    }
+  } else {
+    for (let stt = 0; stt < oldOrderNos.length; stt++) {
+      const orderNo = oldOrderNos[stt];
+      orders[orderNo] = {
+        name: getName(msg.from),
+        text: newOrders[stt].trim(),
+        paid: false,
+        received: false,
+      };
+    }
   }
+
+  // const newOrders = match.input
+  //   .split(new RegExp(KEY.GET_ORDER))
+  //   .filter((o) => !!o.trim());
+  // for (const order of newOrders) {
+  //   orders[toOrderKey(msg.from.id)] = {
+  //     name: getName(msg.from),
+  //     text: order.trim(),
+  //     paid: false,
+  //     received: false,
+  //   };
+  // }
 
   await updateData(FILE_PATHS.ORDER, orders);
 });
@@ -207,6 +263,26 @@ bot.onText(KEY.SET_PAYEE, async (msg) => {
 bot.on('edited_message', async (query) => {
   console.log('Edit Message:', query);
 
+  //validate order(s)
+  if (
+    /\/order(.+)/i.test(query.text) &&
+    !KEY.ORDER_LIST.test(query.text) &&
+    query.text.split(new RegExp(KEY.GET_ORDER)).length !=
+      query.text.split('/').length
+  ) {
+    console.log('wrong order');
+    bot.sendChatAction(query.chat.id, 'typing');
+    bot.sendMessage(
+      query.chat.id,
+      `Order sai cú pháp rồi kìa, <b>${getName(query.from)}</b> ơi.🤪liu liu🤪`,
+      {
+        parse_mode: 'HTML',
+      },
+    );
+    return;
+  }
+
+  //accept order
   if (new RegExp(KEY.ORDER).test(query.text)) {
     const orders = await getData(FILE_PATHS.ORDER);
     //const text = query.text.replace(REGEXP_REPLACE.ORDER, ' ').trim();
@@ -220,7 +296,9 @@ bot.on('edited_message', async (query) => {
       k.includes(findOrderKey(query.from.id)),
     );
     let stt = 0;
-    const newOrders = text.split(new RegExp(KEY.GET_ORDER)).filter((o) => !!o);
+    const newOrders = text
+      .split(new RegExp(KEY.GET_ORDER))
+      .filter((o) => !!o.trim());
 
     if (newOrders.length != keys.length) {
       //get new identity number
