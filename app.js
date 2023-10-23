@@ -78,7 +78,8 @@ bot.on('message', (msg) => {
 
   //validate order(s)
   if (
-    !commands.find((x) => msg.text.startsWith(x)) ||
+    (msg.text.startsWith('/') &&
+      !commands.find((x) => msg.text.startsWith(x))) ||
     (/\/order(.+)/i.test(msg.text) &&
       !KEY.ORDER_LIST.test(msg.text) &&
       msg.text.split(new RegExp(KEY.GET_ORDER)).length !=
