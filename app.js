@@ -25,6 +25,7 @@ const {
 const CronJob = require('cron').CronJob;
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+let hasNewOrder = false;
 
 bot.setMyCommands([
   {
@@ -73,15 +74,15 @@ bot.on('polling_error', (err) => {
 
 bot.on('message', (msg) => {
   console.log('Message:', msg);
-  // console.log('1:::: ', msg.text.split(new RegExp(KEY.GET_ORDER)));
-  // console.log('2:::: ', msg.text.split('/'));
+  const commands = ['/order', '/registerpayee', '/cancel'];
 
   //validate order(s)
   if (
-    /\/order(.+)/i.test(msg.text) &&
-    !KEY.ORDER_LIST.test(msg.text) &&
-    msg.text.split(new RegExp(KEY.GET_ORDER)).length !=
-      msg.text.split('/').length
+    !commands.find((x) => msg.text.startsWith(x)) ||
+    (/\/order(.+)/i.test(msg.text) &&
+      !KEY.ORDER_LIST.test(msg.text) &&
+      msg.text.split(new RegExp(KEY.GET_ORDER)).length !=
+        msg.text.split('/').length)
   ) {
     console.log('wrong order');
     bot.sendChatAction(msg.chat.id, 'typing');
@@ -175,6 +176,7 @@ bot.onText(KEY.ORDER, async (msg, match) => {
   // }
 
   await updateData(FILE_PATHS.ORDER, orders);
+  hasNewOrder = true;
 });
 
 bot.onText(KEY.CANCEL, async (msg, match) => {
@@ -203,6 +205,8 @@ bot.onText(KEY.CANCEL, async (msg, match) => {
       parse_mode: 'HTML',
     },
   );
+
+  hasNewOrder = true;
 });
 
 bot.onText(KEY.ORDER_LIST, async (msg) => {
@@ -222,6 +226,7 @@ bot.onText(KEY.ORDER_LIST, async (msg) => {
     bot.sendChatAction(msg.chat.id, 'typing');
     bot.sendMessage(msg.chat.id, message);
   }
+  hasNewOrder = false;
 });
 
 // bot.onText(KEY.PAY_LIST, async (msg) => {
@@ -328,6 +333,7 @@ bot.on('edited_message', async (query) => {
     }
 
     await updateData(FILE_PATHS.ORDER, orders);
+    hasNewOrder = true;
   }
 });
 
@@ -502,6 +508,35 @@ bot.on('callback_query', async (query) => {
     }
   }
 });
+
+const jobListOrder = new CronJob(
+  '*/2 10,11 * * 1-5',
+  async () => {
+    if (hasNewOrder) {
+      console.log('list order...');
+      const orders = await getData(FILE_PATHS.ORDER);
+      const orderOwners = Object.keys(orders);
+
+      if (orderOwners.length) {
+        let message = '';
+        for (const [i, o] of orderOwners.entries()) {
+          message = message.concat(
+            `${i + 1}. ${orders[o].name}: ${orders[o].text}${
+              i < orderOwners.length ? '\n' : ''
+            }`,
+          );
+        }
+
+        bot.sendChatAction(GROUP_ID, 'typing');
+        bot.sendMessage(GROUP_ID, message);
+      }
+      hasNewOrder = false;
+    }
+  },
+  null,
+  true,
+  'Asia/Ho_Chi_Minh',
+);
 
 const jobOrder = new CronJob(
   '30 10 * * 1-5',
