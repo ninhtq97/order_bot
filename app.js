@@ -280,7 +280,7 @@ bot.on('edited_message', async (query) => {
     bot.sendChatAction(query.chat.id, 'typing');
     bot.sendMessage(
       query.chat.id,
-      `Order sai cú pháp rồi kìa, <b>${getName(query.from)}</b> ơi.🤪liu liu🤪`,
+      `Sai cú pháp rồi, <b>${getName(query.from)}</b> ơi.🤪liu liu🤪`,
       {
         parse_mode: 'HTML',
       },
@@ -540,7 +540,7 @@ const jobListOrder = new CronJob(
 );
 
 const jobOrder = new CronJob(
-  '30 10 * * 1-5',
+  '10 10 * * 1-5',
   async () => {
     bot.sendChatAction(GROUP_ID, 'typing');
     bot.sendMessage(GROUP_ID, `Nhắc nhẹ: Order cơm thôi kẻo đói mn ơi 🍚🍚🍚`);
