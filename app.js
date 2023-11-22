@@ -416,29 +416,32 @@ bot.on('callback_query', async (query) => {
       const orders = await getData(FILE_PATHS.ORDER);
 
       if (Object.keys(orders).length) {
-        orders[userPaid].paid = !orders[userPaid].paid;
+        if (orders[userPaid]) {
+          orders[userPaid].paid = !orders[userPaid].paid;
 
-        const resUpdate = await updateData(FILE_PATHS.ORDER, orders);
-        if (resUpdate) {
-          const replyMarkup = query.message.reply_markup.inline_keyboard.map(
-            (e) =>
-              e.map((x) =>
-                x.callback_data === query.data
-                  ? {
-                      ...x,
-                      text: `Đã gửi ${orders[userPaid].paid ? '✅' : '❌'} `,
-                    }
-                  : x,
-              ),
-          );
+          const resUpdate = await updateData(FILE_PATHS.ORDER, orders);
 
-          bot.editMessageReplyMarkup(
-            { inline_keyboard: replyMarkup },
-            {
-              chat_id: query.message.chat.id,
-              message_id: query.message.message_id,
-            },
-          );
+          if (resUpdate) {
+            const replyMarkup = query.message.reply_markup.inline_keyboard.map(
+              (e) =>
+                e.map((x) =>
+                  x.callback_data === query.data
+                    ? {
+                        ...x,
+                        text: `Đã gửi ${orders[userPaid].paid ? '✅' : '❌'} `,
+                      }
+                    : x,
+                ),
+            );
+
+            bot.editMessageReplyMarkup(
+              { inline_keyboard: replyMarkup },
+              {
+                chat_id: query.message.chat.id,
+                message_id: query.message.message_id,
+              },
+            );
+          }
         }
       }
     } else {
