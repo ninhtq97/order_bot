@@ -28,10 +28,10 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 let hasNewOrder = false;
 
 bot.setMyCommands([
-  {
-    command: 'registerpayee',
-    description: 'Thêm vào danh sách lựa chọn người lụm thóc',
-  },
+  // {
+  //   command: 'registerpayee',
+  //   description: 'Thêm vào danh sách lựa chọn người lụm thóc',
+  // },
   {
     command: 'order',
     description: 'Đặt món theo cú pháp: /order {text}',
@@ -45,6 +45,32 @@ bot.setMyCommands([
     description: 'Huỷ đặt cơm',
   },
 ]);
+
+bot.setMyCommands(
+  [
+    {
+      command: 'registerpayee',
+      description: 'Thêm vào danh sách lựa chọn người lụm thóc',
+    },
+    {
+      command: 'order',
+      description: 'Đặt món theo cú pháp: /order {text}',
+    },
+    {
+      command: 'orderlist',
+      description: 'Danh sách đặt cơm',
+    },
+    {
+      command: 'cancel',
+      description: 'Huỷ đặt cơm',
+    },
+    // {
+    //   command: 'unpaid',
+    //   description: 'DS chưa gửi tiền cơm',
+    // },
+  ],
+  { scope: { type: 'all_chat_administrators' } },
+);
 
 (async () => {
   await fs.mkdir(DIR_PATHS.DATA, { recursive: true });
@@ -74,22 +100,24 @@ bot.on('polling_error', (err) => {
 
 bot.on('message', (msg) => {
   console.log('Message:', msg);
-  const commands = ['/order', '/registerpayee', '/cancel'];
+  const commands = ['/order', '/registerpayee', '/cancel', '/unpaid'];
 
   //validate order(s)
-  if (
-    (msg.text.startsWith('/') &&
-      !commands.find((x) => msg.text.startsWith(x))) ||
-    (/\/order(.+)/i.test(msg.text) &&
-      !KEY.ORDER_LIST.test(msg.text) &&
-      msg.text.split(new RegExp(KEY.GET_ORDER)).length !=
-        msg.text.split('/').length)
-  ) {
+  const isNotCommand =
+    msg.text.startsWith('/') && !commands.find((x) => msg.text.startsWith(x));
+
+  const isInvalidCommand =
+    /\/order(.+)/i.test(msg.text) &&
+    !KEY.ORDER_LIST.test(msg.text) &&
+    msg.text.split(new RegExp(KEY.GET_ORDER)).length !=
+      msg.text.split('/').length;
+
+  if (isNotCommand || isInvalidCommand) {
     console.log('wrong order');
     bot.sendChatAction(msg.chat.id, 'typing');
     bot.sendMessage(
       msg.chat.id,
-      `Order sai cú pháp rồi kìa, <b>${getName(msg.from)}</b> ơi.🤪liu liu🤪`,
+      `Sai cú pháp rồi kìa, <b>${getName(msg.from)}</b> ơi.🤪liu liu🤪`,
       {
         parse_mode: 'HTML',
       },
@@ -150,6 +178,7 @@ bot.onText(KEY.ORDER, async (msg, match) => {
         text: order.trim(),
         paid: false,
         received: false,
+        date: startOfDay(new Date()),
       };
     }
   } else {
@@ -160,6 +189,7 @@ bot.onText(KEY.ORDER, async (msg, match) => {
         text: newOrders[stt].trim(),
         paid: false,
         received: false,
+        date: startOfDay(new Date()),
       };
     }
   }
@@ -228,6 +258,39 @@ bot.onText(KEY.ORDER_LIST, async (msg) => {
     bot.sendMessage(msg.chat.id, message);
   }
   hasNewOrder = false;
+});
+
+bot.onText(KEY.UNPAID, async (msg) => {
+  const orders = await getData(FILE_PATHS.OLD);
+
+  if (Object.keys(orders).length) {
+    const data = Object.values(orders).reduce((prev, cur) => {
+      if (!cur.received) {
+        if (prev[format(new Date(cur.date), 'dd/MM/yyyy')]) {
+          prev[format(new Date(cur.date), 'dd/MM/yyyy')].push(cur);
+        } else {
+          prev[format(new Date(cur.date), 'dd/MM/yyyy')] = [cur];
+        }
+      }
+
+      return prev;
+    }, {});
+
+    let message = '';
+    for (const date of Object.keys(data)) {
+      message = message.concat(`* Ngày ${date}: `);
+
+      const orderInDate = data[date];
+      for (const i in orderInDate) {
+        message = message.concat(
+          `\n\t\t\t\t${+i + 1}. ${orderInDate[i].name}: ${orderInDate[i].text}`,
+        );
+      }
+    }
+
+    bot.sendChatAction(msg.chat.id, 'typing');
+    bot.sendMessage(msg.chat.id, message);
+  }
 });
 
 // bot.onText(KEY.PAY_LIST, async (msg) => {
@@ -318,6 +381,7 @@ bot.on('edited_message', async (query) => {
           text: order.trim(),
           paid: false,
           received: false,
+          date: startOfDay(new Date()),
         };
       }
     } else {
@@ -328,6 +392,7 @@ bot.on('edited_message', async (query) => {
           text: order.trim(),
           paid: false,
           received: false,
+          date: startOfDay(new Date()),
         };
         stt++;
       }
@@ -403,6 +468,15 @@ bot.on('callback_query', async (query) => {
           startOfDay(new Date()),
         )
       ) {
+        const orders = await getData(FILE_PATHS.OLD);
+
+        if (orders && orders[userPaid]) {
+          orders[userPaid].received = !orders[userPaid].received;
+          orders[userPaid].paid = orders[userPaid].received;
+
+          await updateData(FILE_PATHS.OLD, orders);
+        }
+
         const oldContent = JSON.stringify(
           query.message.reply_markup.inline_keyboard,
         );
@@ -633,6 +707,26 @@ const jobReAnnouncePayment = new CronJob(
 const jobClean = new CronJob(
   '0 0 * * *',
   async function () {
+    //save unpaid in yesterday
+    const orders = await getData(FILE_PATHS.ORDER);
+
+    if (Object.keys(orders).length) {
+      for (const owner in orders) {
+        orders[owner].received && delete orders[owner];
+      }
+
+      const beforeUnpaids = await getData(FILE_PATHS.OLD);
+
+      for (const owner in beforeUnpaids) {
+        beforeUnpaids[owner].received && delete beforeUnpaids[owner];
+      }
+
+      await updateData(FILE_PATHS.OLD, {
+        ...(beforeUnpaids ?? {}),
+        ...orders,
+      });
+    }
+
     await updateData(FILE_PATHS.ORDER, INIT_DATA.ORDER);
   },
   null,

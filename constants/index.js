@@ -23,6 +23,7 @@ exports.KEY = {
   REGISTER_PAYEE: /\/registerpayee/,
   SET_PAYEE: /\/setpayee/,
   CANCEL: /\/cancel/,
+  UNPAID: /\/unpaid/,
 };
 
 exports.GROUP_ID = process.env.GROUP_ID;
@@ -38,6 +39,7 @@ exports.FILE_PATHS = {
   MEMBER: `${this.DIR_PATHS.DATA}/member.json`,
   CONFIG: `${this.DIR_PATHS.DATA}/config.json`,
   ORDER: `${this.DIR_PATHS.DATA}/order.json`,
+  OLD: `${this.DIR_PATHS.DATA}/old.json`,
 };
 
 exports.INIT_DATA = {
