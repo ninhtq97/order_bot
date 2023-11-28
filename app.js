@@ -261,10 +261,25 @@ bot.onText(KEY.ORDER_LIST, async (msg) => {
 });
 
 bot.onText(KEY.UNPAID, async (msg) => {
+  const config = await getData(FILE_PATHS.CONFIG);
+  if (msg.from.username !== config.payee.name) {
+    bot.sendChatAction(msg.chat.id, 'typing');
+    bot.sendMessage(msg.chat.id, 'Chức năng chỉ dành cho admin');
+    return;
+  }
+
+  // user send request
+  const username = msg.text.split(' ')[1];
+
   const orders = await getData(FILE_PATHS.OLD);
 
   if (Object.keys(orders).length) {
     const data = Object.values(orders).reduce((prev, cur) => {
+      //bỏ qua người không thoả mãn điều kiện lọc
+      if (username?.trim() && cur.name !== username.trim()) {
+        return prev;
+      }
+
       if (!cur.received) {
         if (prev[format(new Date(cur.date), 'dd/MM/yyyy')]) {
           prev[format(new Date(cur.date), 'dd/MM/yyyy')].push(cur);
@@ -286,6 +301,11 @@ bot.onText(KEY.UNPAID, async (msg) => {
           `\n\t\t\t\t${+i + 1}. ${orderInDate[i].name}: ${orderInDate[i].text}`,
         );
       }
+    }
+
+    // không tìm kiếm thấy kết quả
+    if (!message) {
+      message = '**Không có dữ liệu**';
     }
 
     bot.sendChatAction(msg.chat.id, 'typing');
