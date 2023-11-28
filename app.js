@@ -270,7 +270,6 @@ bot.onText(KEY.UNPAID, async (msg) => {
 
   // user send request
   const username = msg.text.split(' ')[1];
-  console.log(username);
 
   const orders = await getData(FILE_PATHS.OLD);
 
