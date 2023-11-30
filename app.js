@@ -26,6 +26,9 @@ const CronJob = require('cron').CronJob;
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 let hasNewOrder = false;
+let takeFood = false;
+let returnBox = false;
+let kindBees = '';
 
 bot.setMyCommands([
   // {
@@ -92,6 +95,12 @@ bot.setMyCommands(
   } catch (error) {
     await updateData(FILE_PATHS.ORDER, INIT_DATA.ORDER);
   }
+
+  try {
+    await fs.access(FILE_PATHS.OLD, constants.R_OK);
+  } catch (error) {
+    await updateData(FILE_PATHS.OLD, INIT_DATA.ORDER);
+  }
 })();
 
 bot.on('polling_error', (err) => {
@@ -100,7 +109,14 @@ bot.on('polling_error', (err) => {
 
 bot.on('message', (msg) => {
   console.log('Message:', msg);
-  const commands = ['/order', '/registerpayee', '/cancel', '/unpaid'];
+  const commands = [
+    '/order',
+    '/registerpayee',
+    '/cancel',
+    '/unpaid',
+    '/random',
+    '/returnbox',
+  ];
 
   //validate order(s)
   const isNotCommand =
@@ -230,7 +246,9 @@ bot.onText(KEY.CANCEL, async (msg, match) => {
   bot.sendChatAction(GROUP_ID, 'typing');
   bot.sendMessage(
     GROUP_ID,
-    `<b>${getName(msg.from)}</b>, mời nộp 5 chục để huỷ đặt cơm 🤪🤪🤪`,
+    `<b>${getName(
+      msg.from,
+    )}</b>, mời nộp 10k để huỷ đặt cơm 🤪🤪🤪(chỉ nhận tiền mặt)`,
     // Phím sa, gà đã luộc :):)
     {
       parse_mode: 'HTML',
@@ -310,6 +328,46 @@ bot.onText(KEY.UNPAID, async (msg) => {
 
     bot.sendChatAction(msg.chat.id, 'typing');
     bot.sendMessage(msg.chat.id, message);
+  }
+});
+
+bot.onText(KEY.RANDOM, async (msg) => {
+  //validate request user
+  const config = await getData(FILE_PATHS.CONFIG);
+  if (msg.from.username !== config.payee.name) {
+    bot.sendChatAction(msg.chat.id, 'typing');
+    bot.sendMessage(msg.chat.id, 'Chức năng chỉ dành cho admin');
+    return;
+  }
+
+  const orders = await getData(FILE_PATHS.ORDER);
+  const orderOwners = Object.keys(orders);
+
+  if (orderOwners.length) {
+    takeFood = true;
+
+    bot.sendChatAction(msg.chat.id, 'typing');
+    bot.sendMessage(msg.chat.id, 'Kích hoạt thành công vòng quay tốt bụng.');
+  }
+});
+
+bot.onText(KEY.RETURN_BOX, async (msg) => {
+  //validate request user
+  const config = await getData(FILE_PATHS.CONFIG);
+  if (msg.from.username !== config.payee.name) {
+    bot.sendChatAction(msg.chat.id, 'typing');
+    bot.sendMessage(msg.chat.id, 'Chức năng chỉ dành cho admin');
+    return;
+  }
+
+  const orders = await getData(FILE_PATHS.ORDER);
+  const orderOwners = Object.keys(orders);
+
+  if (orderOwners.length) {
+    returnBox = true;
+
+    bot.sendChatAction(msg.chat.id, 'typing');
+    bot.sendMessage(msg.chat.id, 'Đã gửi yêu cầu trả đồ.');
   }
 });
 
@@ -648,6 +706,95 @@ const jobOrder = new CronJob(
   'Asia/Ho_Chi_Minh',
 );
 
+function shuffle(a) {
+  var j, x, i;
+  for (i = a.length - 1; i > 0; i--) {
+    j = Math.floor(Math.random() * (i + 1));
+    x = a[i];
+    a[i] = a[j];
+    a[j] = x;
+  }
+  return a;
+}
+
+const jobTakeLunch = new CronJob(
+  '55 11 * * 1-5',
+  async function () {
+    const orders = await getData(FILE_PATHS.ORDER);
+    const orderOwners = Object.keys(orders);
+
+    if (takeFood && orderOwners.length) {
+      const todayUser = [];
+      for (const [i, o] of orderOwners.entries()) {
+        if (!todayUser.includes(orders[o].name)) {
+          todayUser.push(orders[o].name);
+        }
+      }
+      console.log('today: ', todayUser);
+
+      //random user
+      // if (orderOwners.length > 4) {
+      let totalOrders = orderOwners.length;
+      const LIMIT_ORDER = 8;
+      const bees = [];
+
+      let box = [...todayUser, ...todayUser, ...todayUser];
+      // console.log('orignal: ', box);
+
+      //shuffle box
+      box = shuffle(box);
+      // console.log('shuffled: ', box);
+
+      //pick kind bees
+      do {
+        const beeStt = Math.floor(Math.random() * box.length + 1) - 1;
+        if (!bees.includes(box[beeStt])) {
+          bees.push(box[beeStt]);
+
+          if (totalOrders > LIMIT_ORDER) {
+            totalOrders -= LIMIT_ORDER;
+          } else {
+            totalOrders = 0;
+          }
+        }
+      } while (totalOrders % LIMIT_ORDER > 0);
+
+      // console.log('kind bees: ', bees);
+
+      kindBees = bees.map((item) => '@' + item).join(', ');
+      const message = `<i>🗓Ngày mới lại tới, hôm nay vòng quay <b>TỐT BỤNG</b> đã chọn ra <b>${kindBees}</b> là người đi lấy cơm giúp mọi người ${bees.map(
+        (item) => '🐝',
+      )}\n* Vị trí: khu vực bàn gỗ tầng 1, túi có tên Khánh LĐT(để ý số suất cơm nhé) 🐬🐬\n\t\t😍😍😍Cám ơn <b>${kindBees}</b> rất nhiều 😍😍😍</i>`;
+
+      bot.sendChatAction(GROUP_ID, 'typing');
+      bot.sendMessage(GROUP_ID, message, { parse_mode: 'HTML' });
+      // }
+    }
+  },
+  null,
+  true,
+  'Asia/Ho_Chi_Minh',
+);
+
+const jobReturnBox = new CronJob(
+  '55 13 * * 1-5',
+  async function () {
+    if (returnBox && takeFood && kindBees) {
+      const message = `<i><b>${kindBees}</b> ơi, đừng quên trả lại khay cơm cho nhà bếp nhé ${kindBees
+        .split(',')
+        .map(
+          (item) => '🐝',
+        )}</i>\n(nếu không thấy người giao cơm có thể để gọn túi đồ vào 1 góc tầng 1)`;
+
+      bot.sendChatAction(GROUP_ID, 'typing');
+      bot.sendMessage(GROUP_ID, message, { parse_mode: 'HTML' });
+    }
+  },
+  null,
+  true,
+  'Asia/Ho_Chi_Minh',
+);
+
 const jobAnnouncePayment = new CronJob(
   '0 15 * * 1-5',
   async function () {
@@ -751,6 +898,11 @@ const jobClean = new CronJob(
     }
 
     await updateData(FILE_PATHS.ORDER, INIT_DATA.ORDER);
+
+    //reset data
+    takeFood = false;
+    returnBox = false;
+    kindBees = '';
   },
   null,
   true,

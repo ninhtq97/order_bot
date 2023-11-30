@@ -24,6 +24,8 @@ exports.KEY = {
   SET_PAYEE: /\/setpayee/,
   CANCEL: /\/cancel/,
   UNPAID: /\/unpaid/,
+  RANDOM: /\/random/,
+  RETURN_BOX: /\/returnbox/,
 };
 
 exports.GROUP_ID = process.env.GROUP_ID;
