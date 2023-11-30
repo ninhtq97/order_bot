@@ -347,7 +347,7 @@ bot.onText(KEY.RANDOM, async (msg) => {
     takeFood = true;
 
     bot.sendChatAction(msg.chat.id, 'typing');
-    bot.sendMessage(msg.chat.id, 'Kích hoạt thành công chiếc hộp tốt bụng.');
+    bot.sendMessage(msg.chat.id, 'Kích hoạt thành công MÈO HAM ĂN đi lấy cá.');
   }
 });
 
@@ -370,7 +370,7 @@ bot.onText(KEY.RETURN_BOX, async (msg) => {
     bot.sendChatAction(msg.chat.id, 'typing');
     bot.sendMessage(
       msg.chat.id,
-      'Kích hoạt chiếc hộp tốt bụng và yêu cầu trả đồ.',
+      'Kích hoạt MÈO HAM ĂN đi lấy cá và yêu cầu trả hộp.',
     );
   }
 });
@@ -774,9 +774,9 @@ const jobTakeLunch = new CronJob(
         // console.log('kind bees: ', bees);
 
         kindBees = bees.map((item) => '@' + item).join(', ');
-        const message = `<i>🗓Ngày mới lại tới, hôm nay chiếc hộp <b>TỐT BỤNG</b> đã ngẫu nhiên chọn ra <b>${kindBees}</b> là người đi lấy cơm giúp mọi người ${bees.map(
+        const message = `<i>🗓Ngày mới lại tới, hôm nay MÈO <b>HAM ĂN</b> đã ngẫu nhiên chọn ra <b>${kindBees}</b> là người đi lấy cơm giúp mọi người ${bees.map(
           (item) => '🐝',
-        )}\n* Vị trí: khu vực bàn gỗ tầng 1, túi có tên Khánh LĐT(để ý số suất cơm nhé) 🐬🐬\n\t\t\t\t😍Cám ơn <b>${kindBees}</b> rất nhiều 😍</i>`;
+        )}\n* Vị trí: khu vực bàn tròn tầng 1, túi có tên Khánh LĐT(để ý số suất cơm nhé) 🐬🐬\n\t\t\t\t😍Cám ơn <b>${kindBees}</b> rất nhiều 😍</i>`;
 
         bot.sendChatAction(GROUP_ID, 'typing');
         bot.sendMessage(GROUP_ID, message, { parse_mode: 'HTML' });
@@ -794,7 +794,7 @@ const jobReturnBox = new CronJob(
   '55 13 * * 1-5',
   async function () {
     if (returnBox && takeFood && kindBees) {
-      const message = `<i><b>${kindBees}</b> ơi, đừng quên trả lại khay cơm cho nhà bếp nhé ${kindBees
+      const message = `<i><b>${kindBees}</b> ơi, đừng quên trả lại hộp cơm cho nhà bếp nhé ${kindBees
         .split(',')
         .map(
           (item) => '🐝',
