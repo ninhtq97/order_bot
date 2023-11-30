@@ -347,7 +347,7 @@ bot.onText(KEY.RANDOM, async (msg) => {
     takeFood = true;
 
     bot.sendChatAction(msg.chat.id, 'typing');
-    bot.sendMessage(msg.chat.id, 'Kích hoạt thành công vòng quay tốt bụng.');
+    bot.sendMessage(msg.chat.id, 'Kích hoạt thành công chiếc hộp tốt bụng.');
   }
 });
 
@@ -365,9 +365,13 @@ bot.onText(KEY.RETURN_BOX, async (msg) => {
 
   if (orderOwners.length) {
     returnBox = true;
+    takeFood = true;
 
     bot.sendChatAction(msg.chat.id, 'typing');
-    bot.sendMessage(msg.chat.id, 'Đã gửi yêu cầu trả đồ.');
+    bot.sendMessage(
+      msg.chat.id,
+      'Kích hoạt chiếc hộp tốt bụng và yêu cầu trả đồ.',
+    );
   }
 });
 
@@ -730,45 +734,55 @@ const jobTakeLunch = new CronJob(
           todayUser.push(orders[o].name);
         }
       }
-      console.log('today: ', todayUser);
+      //console.log('today: ', todayUser);
 
       //random user
-      // if (orderOwners.length > 4) {
-      let totalOrders = orderOwners.length;
-      const LIMIT_ORDER = 8;
-      const bees = [];
+      const yesterdayBees = kindBees
+        .split(', ')
+        .map((b) => b.trim().replace('@', ''));
 
-      let box = [...todayUser, ...todayUser, ...todayUser];
-      // console.log('orignal: ', box);
+      if (todayUser.length > yesterdayBees.length) {
+        let totalOrders = orderOwners.length;
+        const LIMIT_ORDER = 8;
+        const bees = [];
 
-      //shuffle box
-      box = shuffle(box);
-      // console.log('shuffled: ', box);
+        let box = [...todayUser, ...todayUser, ...todayUser];
+        // console.log('orignal: ', box);
 
-      //pick kind bees
-      do {
-        const beeStt = Math.floor(Math.random() * box.length + 1) - 1;
-        if (!bees.includes(box[beeStt])) {
-          bees.push(box[beeStt]);
+        //shuffle box
+        box = shuffle(box);
+        // console.log('shuffled: ', box);
 
-          if (totalOrders > LIMIT_ORDER) {
-            totalOrders -= LIMIT_ORDER;
-          } else {
-            totalOrders = 0;
+        //pick kind bees
+        do {
+          const beeStt = Math.floor(Math.random() * box.length + 1) - 1;
+
+          if (
+            !bees.includes(box[beeStt]) &&
+            (yesterdayBees.length === 0 || !yesterdayBees.includes(box[beeStt]))
+          ) {
+            bees.push(box[beeStt]);
+
+            if (totalOrders > LIMIT_ORDER) {
+              totalOrders -= LIMIT_ORDER;
+            } else {
+              totalOrders = 0;
+            }
           }
-        }
-      } while (totalOrders % LIMIT_ORDER > 0);
+        } while (totalOrders % LIMIT_ORDER > 0);
 
-      // console.log('kind bees: ', bees);
+        // console.log('kind bees: ', bees);
 
-      kindBees = bees.map((item) => '@' + item).join(', ');
-      const message = `<i>🗓Ngày mới lại tới, hôm nay vòng quay <b>TỐT BỤNG</b> đã chọn ra <b>${kindBees}</b> là người đi lấy cơm giúp mọi người ${bees.map(
-        (item) => '🐝',
-      )}\n* Vị trí: khu vực bàn gỗ tầng 1, túi có tên Khánh LĐT(để ý số suất cơm nhé) 🐬🐬\n\t\t😍😍😍Cám ơn <b>${kindBees}</b> rất nhiều 😍😍😍</i>`;
+        kindBees = bees.map((item) => '@' + item).join(', ');
+        const message = `<i>🗓Ngày mới lại tới, hôm nay chiếc hộp <b>TỐT BỤNG</b> đã ngẫu nhiên chọn ra <b>${kindBees}</b> là người đi lấy cơm giúp mọi người ${bees.map(
+          (item) => '🐝',
+        )}\n* Vị trí: khu vực bàn gỗ tầng 1, túi có tên Khánh LĐT(để ý số suất cơm nhé) 🐬🐬\n\t\t\t\t😍Cám ơn <b>${kindBees}</b> rất nhiều 😍</i>`;
 
-      bot.sendChatAction(GROUP_ID, 'typing');
-      bot.sendMessage(GROUP_ID, message, { parse_mode: 'HTML' });
-      // }
+        bot.sendChatAction(GROUP_ID, 'typing');
+        bot.sendMessage(GROUP_ID, message, { parse_mode: 'HTML' });
+      }
+    } else {
+      kindBees = '';
     }
   },
   null,
@@ -902,7 +916,7 @@ const jobClean = new CronJob(
     //reset data
     takeFood = false;
     returnBox = false;
-    kindBees = '';
+    //kindBees = '';
   },
   null,
   true,
