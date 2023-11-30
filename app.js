@@ -311,7 +311,7 @@ bot.onText(KEY.UNPAID, async (msg) => {
 
     let message = '';
     for (const date of Object.keys(data)) {
-      message = message.concat(`* Ngày ${date}: `);
+      message = message.concat(`\n🗓 Ngày ${date}: `);
 
       const orderInDate = data[date];
       for (const i in orderInDate) {
