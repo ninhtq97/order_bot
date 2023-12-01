@@ -722,7 +722,7 @@ function shuffle(a) {
 }
 
 const jobTakeLunch = new CronJob(
-  '55 11 * * 1-5',
+  '40 11 * * 1-5',
   async function () {
     const orders = await getData(FILE_PATHS.ORDER);
     const orderOwners = Object.keys(orders);
@@ -776,7 +776,7 @@ const jobTakeLunch = new CronJob(
         kindBees = bees.map((item) => '@' + item).join(', ');
         const message = `<i>🗓Ngày mới lại tới, hôm nay MÈO <b>HAM ĂN</b> đã ngẫu nhiên chọn ra <b>${kindBees}</b> là người đi lấy cơm giúp mọi người ${bees.map(
           (item) => '🐝',
-        )}\n* Vị trí: khu vực bàn tròn tầng 1, túi có tên Khánh LĐT(để ý số suất cơm nhé) 🐬🐬\n\t\t\t\t😍Cám ơn <b>${kindBees}</b> rất nhiều 😍</i>`;
+        )}\n🚩 Vị trí: khu vực bàn tròn tầng 1, túi có tên Khánh LĐT(để ý số suất cơm nhé)\n⏰ Thời gian: 11h 55'\n\t\t\t\t\t\t\t\t😍Cám ơn <b>${kindBees}</b> rất nhiều 😍</i>`;
 
         bot.sendChatAction(GROUP_ID, 'typing');
         bot.sendMessage(GROUP_ID, message, { parse_mode: 'HTML' });
