@@ -781,9 +781,10 @@ const jobTakeLunch = new CronJob(
         bot.sendChatAction(GROUP_ID, 'typing');
         bot.sendMessage(GROUP_ID, message, { parse_mode: 'HTML' });
       }
-    } else {
-      kindBees = '';
     }
+    // else {
+    //   kindBees = '';
+    // }
   },
   null,
   true,
