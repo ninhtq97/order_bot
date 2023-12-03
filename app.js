@@ -747,7 +747,7 @@ const jobTakeLunch = new CronJob(
       const beforeFisnishedBees = [...new Set(kindBeesInWeek)];
 
       let totalOrders = orderOwners.length;
-      const LIMIT_ORDER = +process.env.LIMIT_ORDER;
+      const LIMIT_ORDER = +(process.env.LIMIT_ORDER ?? '8');
       const bees = [];
 
       let box = [...todayUser, ...todayUser, ...todayUser];
