@@ -28,7 +28,6 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 let hasNewOrder = false;
 let takeFood = false;
 let returnBox = false;
-let kindBees = '';
 
 bot.setMyCommands([
   // {
@@ -101,6 +100,12 @@ bot.setMyCommands(
   } catch (error) {
     await updateData(FILE_PATHS.OLD, INIT_DATA.ORDER);
   }
+
+  try {
+    await fs.access(FILE_PATHS.BEES, constants.R_OK);
+  } catch (error) {
+    await updateData(FILE_PATHS.BEES, INIT_DATA.MEMBER);
+  }
 })();
 
 bot.on('polling_error', (err) => {
@@ -129,7 +134,6 @@ bot.on('message', (msg) => {
       msg.text.split('/').length;
 
   if (isNotCommand || isInvalidCommand) {
-    console.log('wrong order');
     bot.sendChatAction(msg.chat.id, 'typing');
     bot.sendMessage(
       msg.chat.id,
@@ -421,7 +425,6 @@ bot.on('edited_message', async (query) => {
     query.text.split(new RegExp(KEY.GET_ORDER)).length !=
       query.text.split('/').length
   ) {
-    console.log('wrong order');
     bot.sendChatAction(query.chat.id, 'typing');
     bot.sendMessage(
       query.chat.id,
@@ -673,7 +676,6 @@ const jobListOrder = new CronJob(
   '*/2 10,11 * * 1-5',
   async () => {
     if (hasNewOrder) {
-      console.log('list order...');
       const orders = await getData(FILE_PATHS.ORDER);
       const orderOwners = Object.keys(orders);
 
@@ -734,57 +736,65 @@ const jobTakeLunch = new CronJob(
           todayUser.push(orders[o].name);
         }
       }
-      //console.log('today: ', todayUser);
+      // console.log('today: ', todayUser);
 
       //random user
-      const yesterdayBees = kindBees
-        .split(', ')
-        .map((b) => b.trim().replace('@', ''));
+      const kindBeesHistories = await getData(FILE_PATHS.BEES);
+      const kindBeesInWeek = kindBeesHistories.reduce((prev, cur) => {
+        const kindBees = cur.split(', ').map((b) => b.trim().replace('@', ''));
+        return [...prev, ...kindBees];
+      }, []);
+      const beforeFisnishedBees = [...new Set(kindBeesInWeek)];
 
-      if (todayUser.length > yesterdayBees.length) {
-        let totalOrders = orderOwners.length;
-        const LIMIT_ORDER = 8;
-        const bees = [];
+      let totalOrders = orderOwners.length;
+      const LIMIT_ORDER = 8;
+      const bees = [];
 
-        let box = [...todayUser, ...todayUser, ...todayUser];
-        // console.log('orignal: ', box);
+      let box = [...todayUser, ...todayUser, ...todayUser];
+      // console.log('orignal: ', box);
 
-        //shuffle box
-        box = shuffle(box);
-        // console.log('shuffled: ', box);
+      //shuffle box
+      box = shuffle(box);
+      // console.log('shuffled: ', box);
 
-        //pick kind bees
-        do {
-          const beeStt = Math.floor(Math.random() * box.length + 1) - 1;
+      //pick kind bees
+      do {
+        const beeStt = Math.floor(Math.random() * box.length + 1) - 1;
 
-          if (
-            !bees.includes(box[beeStt]) &&
-            (yesterdayBees.length === 0 || !yesterdayBees.includes(box[beeStt]))
-          ) {
-            bees.push(box[beeStt]);
+        const checkAvailabeUser =
+          [...new Set([...todayUser, ...beforeFisnishedBees])].length -
+          beforeFisnishedBees.length;
 
-            if (totalOrders > LIMIT_ORDER) {
-              totalOrders -= LIMIT_ORDER;
-            } else {
-              totalOrders = 0;
-            }
+        if (
+          !bees.includes(box[beeStt]) &&
+          (beforeFisnishedBees.length === 0 ||
+            checkAvailabeUser <= Math.ceil(orderOwners.length / LIMIT_ORDER) ||
+            !beforeFisnishedBees.includes(box[beeStt]))
+        ) {
+          bees.push(box[beeStt]);
+
+          if (totalOrders > LIMIT_ORDER) {
+            totalOrders -= LIMIT_ORDER;
+          } else {
+            totalOrders = 0;
           }
-        } while (totalOrders % LIMIT_ORDER > 0);
+        }
+      } while (totalOrders % LIMIT_ORDER > 0);
 
-        // console.log('kind bees: ', bees);
+      // console.log('kind bees: ', bees);
 
-        kindBees = bees.map((item) => '@' + item).join(', ');
-        const message = `<i>🗓Ngày mới lại tới, hôm nay MÈO <b>HAM ĂN</b> đã ngẫu nhiên chọn ra <b>${kindBees}</b> là người đi lấy cơm giúp mọi người ${bees.map(
-          (item) => '🐝',
-        )}\n🚩 Vị trí: khu vực bàn tròn tầng 1, túi có tên Khánh LĐT(để ý số suất cơm nhé)\n⏰ Thời gian: 11h 55'\n\t\t\t\t\t\t\t\t😍Cám ơn <b>${kindBees}</b> rất nhiều 😍</i>`;
+      const todayKindBees = bees.map((item) => '@' + item).join(', ');
+      const message = `<i>🗓Ngày mới lại tới, hôm nay MÈO <b>HAM ĂN</b> đã ngẫu nhiên chọn ra <b>${todayKindBees}</b> là người đi lấy cơm giúp mọi người ${bees.map(
+        (item) => '🐝',
+      )}\n🚩 Vị trí: khu vực bàn tròn tầng 1, túi có tên Khánh LĐT(để ý số suất cơm nhé)\n⏰ Thời gian: 11h 55'\n\t\t\t\t\t\t\t\t😍Cám ơn <b>${todayKindBees}</b> rất nhiều 😍</i>`;
 
-        bot.sendChatAction(GROUP_ID, 'typing');
-        bot.sendMessage(GROUP_ID, message, { parse_mode: 'HTML' });
-      }
+      //update histories
+      kindBeesHistories.push(todayKindBees);
+      await updateData(FILE_PATHS.BEES, kindBeesHistories);
+
+      bot.sendChatAction(GROUP_ID, 'typing');
+      bot.sendMessage(GROUP_ID, message, { parse_mode: 'HTML' });
     }
-    // else {
-    //   kindBees = '';
-    // }
   },
   null,
   true,
@@ -794,7 +804,10 @@ const jobTakeLunch = new CronJob(
 const jobReturnBox = new CronJob(
   '55 13 * * 1-5',
   async function () {
-    if (returnBox && takeFood && kindBees) {
+    if (returnBox && takeFood) {
+      const kindBeesHistories = await getData(FILE_PATHS.BEES);
+      const kindBees = kindBeesHistories[kindBeesHistories.length - 1] ?? '';
+
       const message = `<i><b>${kindBees}</b> ơi, đừng quên trả lại hộp cơm cho nhà bếp nhé ${kindBees
         .split(',')
         .map(
@@ -917,7 +930,10 @@ const jobClean = new CronJob(
     //reset data
     takeFood = false;
     returnBox = false;
-    //kindBees = '';
+
+    if (new Date().getDay() === 1) {
+      await updateData(FILE_PATHS.BEES, INIT_DATA.MEMBER);
+    }
   },
   null,
   true,
