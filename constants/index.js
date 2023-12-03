@@ -42,6 +42,7 @@ exports.FILE_PATHS = {
   CONFIG: `${this.DIR_PATHS.DATA}/config.json`,
   ORDER: `${this.DIR_PATHS.DATA}/order.json`,
   OLD: `${this.DIR_PATHS.DATA}/old.json`,
+  BEES: `${this.DIR_PATHS.DATA}/bees.json`,
 };
 
 exports.INIT_DATA = {
