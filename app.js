@@ -768,7 +768,7 @@ const jobTakeLunch = new CronJob(
         if (
           !bees.includes(box[beeStt]) &&
           (beforeFisnishedBees.length === 0 ||
-            checkAvailabeUser <= Math.ceil(orderOwners.length / LIMIT_ORDER) ||
+            checkAvailabeUser < Math.ceil(orderOwners.length / LIMIT_ORDER) ||
             !beforeFisnishedBees.includes(box[beeStt]))
         ) {
           bees.push(box[beeStt]);
