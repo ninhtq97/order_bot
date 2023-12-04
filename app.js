@@ -736,19 +736,19 @@ const jobTakeLunch = new CronJob(
           todayUser.push(orders[o].name);
         }
       }
-      // console.log('today: ', todayUser);
+      //console.log('today: ', todayUser);
 
       //random user
       const kindBeesHistories = await getData(FILE_PATHS.BEES);
-      const kindBeesInWeek = kindBeesHistories.reduce((prev, cur) => {
-        const kindBees = cur.split(', ').map((b) => b.trim().replace('@', ''));
-        return [...prev, ...kindBees];
+      let kindBeesInWeek = kindBeesHistories.reduce((prev, cur) => {
+        const bees = cur.split(', ').map((b) => b.trim().replace('@', ''));
+        return [...prev, ...bees];
       }, []);
-      const beforeFisnishedBees = [...new Set(kindBeesInWeek)];
+      kindBeesInWeek = [...new Set(kindBeesInWeek)];
 
       let totalOrders = orderOwners.length;
       const LIMIT_ORDER = +(process.env.LIMIT_ORDER ?? '8');
-      const bees = [];
+      const todayKindBees = [];
 
       let box = [...todayUser, ...todayUser, ...todayUser];
       // console.log('orignal: ', box);
@@ -758,38 +758,49 @@ const jobTakeLunch = new CronJob(
       // console.log('shuffled: ', box);
 
       //pick kind bees
+      const checkAvailabeUser =
+        [...new Set([...todayUser, ...kindBeesInWeek])].length -
+        kindBeesInWeek.length;
+      const takeFoodBees = Math.ceil(orderOwners.length / LIMIT_ORDER);
+      //console.log('checkAvailabeUser: ', checkAvailabeUser);
+      //console.log('takeFoodBees: ', takeFoodBees);
+
+      //pick bees not in week
+      if (checkAvailabeUser > 0 && checkAvailabeUser <= takeFoodBees) {
+        const beesNotInWeek = todayUser.filter(
+          (u) => !kindBeesInWeek.includes(u),
+        );
+        //console.log('beesNotInWeek: ', beesNotInWeek);
+        todayKindBees.push(...beesNotInWeek);
+        totalOrders -= LIMIT_ORDER * checkAvailabeUser;
+      }
+
       do {
         const beeStt = Math.floor(Math.random() * box.length + 1) - 1;
 
-        const checkAvailabeUser =
-          [...new Set([...todayUser, ...beforeFisnishedBees])].length -
-          beforeFisnishedBees.length;
-
         if (
-          !bees.includes(box[beeStt]) &&
-          (beforeFisnishedBees.length === 0 ||
-            checkAvailabeUser < Math.ceil(orderOwners.length / LIMIT_ORDER) ||
-            !beforeFisnishedBees.includes(box[beeStt]))
+          !todayKindBees.includes(box[beeStt]) &&
+          (kindBeesInWeek.length === 0 ||
+            checkAvailabeUser < takeFoodBees ||
+            !kindBeesInWeek.includes(box[beeStt]))
         ) {
-          bees.push(box[beeStt]);
+          todayKindBees.push(box[beeStt]);
 
-          if (totalOrders > LIMIT_ORDER) {
-            totalOrders -= LIMIT_ORDER;
-          } else {
-            totalOrders = 0;
-          }
+          totalOrders -= LIMIT_ORDER;
         }
-      } while (totalOrders % LIMIT_ORDER > 0);
+      } while (totalOrders > 0 && totalOrders % LIMIT_ORDER > 0);
 
-      // console.log('kind bees: ', bees);
+      //console.log('kind bees: ', todayKindBees);
 
-      const todayKindBees = bees.map((item) => '@' + item).join(', ');
-      const message = `<i>🗓Ngày mới lại tới, hôm nay MÈO <b>HAM ĂN</b> đã ngẫu nhiên chọn ra <b>${todayKindBees}</b> là người đi lấy cơm giúp mọi người ${bees.map(
+      const todayKindBeeUserNames = todayKindBees
+        .map((item) => '@' + item)
+        .join(', ');
+      const message = `<i>🗓Ngày mới lại tới, hôm nay MÈO <b>HAM ĂN</b> đã ngẫu nhiên chọn ra <b>${todayKindBeeUserNames}</b> là người đi lấy cơm giúp mọi người ${todayKindBees.map(
         (item) => '🐝',
-      )}\n🚩 Vị trí: khu vực bàn tròn tầng 1, túi có tên Khánh LĐT(để ý số suất cơm nhé)\n⏰ Thời gian: 11h 55'\n\t\t\t\t\t\t\t\t😍Cám ơn <b>${todayKindBees}</b> rất nhiều 😍</i>`;
+      )}\n🚩 Vị trí: khu vực bàn tròn tầng 1, túi có tên Khánh LĐT(để ý số suất cơm nhé)\n⏰ Thời gian: 11h 55'\n\t\t\t\t\t\t\t\t😍Cám ơn <b>${todayKindBeeUserNames}</b> rất nhiều 😍</i>`;
 
       //update histories
-      kindBeesHistories.push(todayKindBees);
+      kindBeesHistories.push(todayKindBeeUserNames);
       await updateData(FILE_PATHS.BEES, kindBeesHistories);
 
       bot.sendChatAction(GROUP_ID, 'typing');
@@ -806,9 +817,10 @@ const jobReturnBox = new CronJob(
   async function () {
     if (returnBox && takeFood) {
       const kindBeesHistories = await getData(FILE_PATHS.BEES);
-      const kindBees = kindBeesHistories[kindBeesHistories.length - 1] ?? '';
+      const todayKindBees =
+        kindBeesHistories[kindBeesHistories.length - 1] ?? '';
 
-      const message = `<i><b>${kindBees}</b> ơi, đừng quên trả lại hộp cơm cho nhà bếp nhé ${kindBees
+      const message = `<i><b>${todayKindBees}</b> ơi, đừng quên trả lại hộp cơm cho nhà bếp nhé ${todayKindBees
         .split(',')
         .map(
           (item) => '🐝',
