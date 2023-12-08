@@ -245,19 +245,29 @@ bot.onText(KEY.CANCEL, async (msg, match) => {
     return;
   }
 
+  let messageList = [
+    `<b>${getName(
+      msg.from,
+    )}</b>, mời nộp 10k để huỷ đặt cơm 🤪🤪(chỉ nhận tiền mặt)`,
+    `Chơi vậy kì lắm nha <b>${getName(msg.from)}</b> 😮😮😮`,
+    `Phím sa, gà đã thịt. Có lẽ nên nghỉ chơi với <b>${getName(
+      msg.from,
+    )}</b> từ hôm nay 😅😅`,
+    `Hôm sau <b>${getName(
+      msg.from,
+    )}</b> order mà nhận thông báo thất bại thì đừng hỏi BOT là tại sao ha 😄😄😄`,
+    `Nay BOT vui tính lắm mới cho <b>${getName(msg.from)}</b> huỷ đấy nhé 😋😋`,
+  ];
+
+  messageList = shuffle(messageList);
+  const msStt = Math.floor(Math.random() * messageList.length + 1) - 1;
+
   await updateData(FILE_PATHS.ORDER, orders);
 
   bot.sendChatAction(GROUP_ID, 'typing');
-  bot.sendMessage(
-    GROUP_ID,
-    `<b>${getName(
-      msg.from,
-    )}</b>, mời nộp 10k để huỷ đặt cơm 🤪🤪🤪(chỉ nhận tiền mặt)`,
-    // Phím sa, gà đã luộc :):)
-    {
-      parse_mode: 'HTML',
-    },
-  );
+  bot.sendMessage(GROUP_ID, messageList[msStt], {
+    parse_mode: 'HTML',
+  });
 
   hasNewOrder = true;
 });
@@ -813,7 +823,7 @@ const jobTakeLunch = new CronJob(
 );
 
 const jobReturnBox = new CronJob(
-  '55 13 * * 1-5',
+  '50 13 * * 1-5',
   async function () {
     if (returnBox && takeFood) {
       const kindBeesHistories = await getData(FILE_PATHS.BEES);
