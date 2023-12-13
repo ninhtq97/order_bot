@@ -26,7 +26,7 @@ const CronJob = require('cron').CronJob;
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 let hasNewOrder = false;
-let takeFood = false;
+let takeFood = process.env.AUTO_RANDOM;
 let returnBox = false;
 
 bot.setMyCommands([
@@ -214,6 +214,14 @@ bot.onText(KEY.ORDER, async (msg, match) => {
     }
   }
 
+  //check order to enable returning box
+  const boxes = ['món 1', 'món 2', 'món 3', 'món 4'];
+  const checkInBox = newOrders.find((o) => boxes.includes(o.toLowerCase()));
+
+  if (checkInBox) {
+    returnBox = true;
+  }
+
   // const newOrders = match.input
   //   .split(new RegExp(KEY.GET_ORDER))
   //   .filter((o) => !!o.trim());
@@ -358,10 +366,14 @@ bot.onText(KEY.RANDOM, async (msg) => {
   const orderOwners = Object.keys(orders);
 
   if (orderOwners.length) {
-    takeFood = true;
+    takeFood = false;
+    returnBox = false;
 
     bot.sendChatAction(msg.chat.id, 'typing');
-    bot.sendMessage(msg.chat.id, 'Kích hoạt thành công MÈO HAM ĂN đi lấy cá.');
+    bot.sendMessage(
+      msg.chat.id,
+      'Tắt kích hoạt thành công MÈO HAM ĂN đi lấy cá.',
+    );
   }
 });
 
@@ -384,7 +396,8 @@ bot.onText(KEY.RETURN_BOX, async (msg) => {
     bot.sendChatAction(msg.chat.id, 'typing');
     bot.sendMessage(
       msg.chat.id,
-      'Kích hoạt MÈO HAM ĂN đi lấy cá và yêu cầu trả hộp.',
+      'Kích hoạt MÈO HAM ĂN đi trả hộp.',
+      // 'Kích hoạt MÈO HAM ĂN đi lấy cá và trả hộp.',
     );
   }
 });
@@ -739,7 +752,7 @@ const jobTakeLunch = new CronJob(
     const orders = await getData(FILE_PATHS.ORDER);
     const orderOwners = Object.keys(orders);
 
-    if (takeFood && orderOwners.length) {
+    if (takeFood && orderOwners.length > 0) {
       const todayUser = [];
       for (const [i, o] of orderOwners.entries()) {
         if (!todayUser.includes(orders[o].name)) {
@@ -950,11 +963,18 @@ const jobClean = new CronJob(
     await updateData(FILE_PATHS.ORDER, INIT_DATA.ORDER);
 
     //reset data
-    takeFood = false;
+    takeFood = true;
     returnBox = false;
 
-    if (new Date().getDay() === 1) {
-      await updateData(FILE_PATHS.BEES, INIT_DATA.MEMBER);
+    const day = new Date().getDay();
+
+    if (day === 1 || day === 2) {
+      const kindBeesHistories = await getData(FILE_PATHS.BEES);
+
+      if (kindBeesHistories.length > 1) {
+        const resetData = kindBeesHistories.slice(-1);
+        await updateData(FILE_PATHS.BEES, resetData);
+      }
     }
   },
   null,
