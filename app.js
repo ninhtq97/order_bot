@@ -256,15 +256,17 @@ bot.onText(KEY.CANCEL, async (msg, match) => {
   let messageList = [
     `<b>${getName(
       msg.from,
-    )}</b>, mời nộp 10k để huỷ đặt cơm 🤪🤪(chỉ nhận tiền mặt)`,
-    `Chơi vậy kì lắm nha <b>${getName(msg.from)}</b> 😮😮😮`,
+    )}</b>, mời nộp 10k để huỷ đặt cơm 🤗🤗(chỉ nhận tiền mặt)`,
+    `Chơi vậy kì lắm nha <b>${getName(msg.from)}</b> 😡😡😡`,
     `Phím sa, gà đã thịt. Có lẽ nên nghỉ chơi với <b>${getName(
       msg.from,
-    )}</b> từ hôm nay 😅😅`,
+    )}</b> từ hôm nay 😔😔😔`,
     `Hôm sau <b>${getName(
       msg.from,
-    )}</b> order mà nhận thông báo thất bại thì đừng hỏi BOT là tại sao ha 😄😄😄`,
-    `Nay BOT vui tính lắm mới cho <b>${getName(msg.from)}</b> huỷ đấy nhé 😋😋`,
+    )}</b> order mà nhận thông báo thất bại thì đừng hỏi BOT là tại sao ha 😏😏😏`,
+    `Nay BOT vui tính lắm mới cho <b>${getName(
+      msg.from,
+    )}</b> huỷ order đấy nhé 😋😋`,
   ];
 
   messageList = shuffle(messageList);
