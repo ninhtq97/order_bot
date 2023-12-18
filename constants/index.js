@@ -18,14 +18,14 @@ exports.REGEXP_REPLACE = {
 exports.KEY = {
   ORDER: /((\/order@(.+?)|\/order)\s(.+))/i,
   GET_ORDER: /\/order\s/i,
-  ORDER_LIST: /\/orderlist/,
+  ORDER_LIST: /\/orderlist/i,
   PAY_LIST: /\/paylist/,
   REGISTER_PAYEE: /\/registerpayee/,
   SET_PAYEE: /\/setpayee/,
-  CANCEL: /\/cancel/,
-  UNPAID: /\/unpaid/,
-  RANDOM: /\/random/,
-  RETURN_BOX: /\/returnbox/,
+  CANCEL: /\/cancel/i,
+  UNPAID: /\/unpaid/i,
+  RANDOM: /\/random/i,
+  RETURN_BOX: /\/returnbox/i,
 };
 
 exports.GROUP_ID = process.env.GROUP_ID;

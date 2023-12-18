@@ -125,7 +125,8 @@ bot.on('message', (msg) => {
 
   //validate order(s)
   const isNotCommand =
-    msg.text.startsWith('/') && !commands.find((x) => msg.text.startsWith(x));
+    msg.text.startsWith('/') &&
+    !commands.find((x) => msg.text.toLowerCase().startsWith(x));
 
   const isInvalidCommand =
     /\/order(.+)/i.test(msg.text) &&
@@ -311,14 +312,14 @@ bot.onText(KEY.UNPAID, async (msg) => {
   }
 
   // user send request
-  const username = msg.text.split(' ')[1];
+  const username = msg.text.replace(KEY.UNPAID, '').trim();
 
   const orders = await getData(FILE_PATHS.OLD);
 
   if (Object.keys(orders).length) {
     const data = Object.values(orders).reduce((prev, cur) => {
       //bỏ qua người không thoả mãn điều kiện lọc
-      if (username?.trim() && cur.name !== username.trim()) {
+      if (username && cur.name !== username) {
         return prev;
       }
 
@@ -838,7 +839,7 @@ const jobTakeLunch = new CronJob(
 );
 
 const jobReturnBox = new CronJob(
-  '50 13 * * 1-5',
+  '40 13 * * 1-5',
   async function () {
     if (returnBox && takeFood) {
       const kindBeesHistories = await getData(FILE_PATHS.BEES);
