@@ -26,7 +26,7 @@ const CronJob = require('cron').CronJob;
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 let hasNewOrder = false;
-let takeFood = process.env.AUTO_RANDOM;
+let takeFood = process.env.AUTO_RANDOM === 'true';
 let returnBox = false;
 
 bot.setMyCommands([
@@ -781,6 +781,8 @@ const jobTakeLunch = new CronJob(
 
       //shuffle box
       box = shuffle(box);
+      box = shuffle(box);
+      box = shuffle(box);
       // console.log('shuffled: ', box);
 
       //pick kind bees
@@ -969,9 +971,9 @@ const jobClean = new CronJob(
     takeFood = true;
     returnBox = false;
 
-    const day = new Date().getDay();
+    const date = new Date().getDate();
 
-    if (day === 1 || day === 2) {
+    if (date % 10 <= 2) {
       const kindBeesHistories = await getData(FILE_PATHS.BEES);
 
       if (kindBeesHistories.length > 1) {
