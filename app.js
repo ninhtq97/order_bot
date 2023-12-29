@@ -1,6 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs/promises');
-const { constants } = require('fs');
+const { constants, existsSync } = require('fs');
 const { format, isEqual, startOfDay } = require('date-fns');
 const {
   KEY,
@@ -731,7 +731,16 @@ const jobOrder = new CronJob(
   async () => {
     bot.sendChatAction(GROUP_ID, 'typing');
     bot.sendMessage(GROUP_ID, `Nhắc nhẹ: Order cơm thôi kẻo đói mn ơi 🍚🍚🍚`);
-    bot.sendMessage(GROUP_ID, 'https://t.me/datcomt12/2521');
+
+    const imagePath = './assets/images/photo_2023-12-29_10-17-26.jpg';
+
+    if (existsSync(imagePath)) {
+      const imgBuf = await fs.readFile(imagePath);
+      bot.sendPhoto(GROUP_ID, imgBuf, {
+        caption:
+          'https://shopeefood.vn/ha-noi/com-pho-com-ga-com-bo-duong-khue',
+      });
+    }
   },
   null,
   true,
