@@ -786,48 +786,42 @@ const jobTakeLunch = new CronJob(
       const todayKindBees = [];
 
       let box = [...todayUser, ...todayUser, ...todayUser];
-      // console.log('orignal: ', box);
 
       //shuffle box
       box = shuffle(box);
       box = shuffle(box);
       box = shuffle(box);
-      // console.log('shuffled: ', box);
 
       //pick kind bees
       const checkAvailabeUser =
         [...new Set([...todayUser, ...kindBeesInWeek])].length -
         kindBeesInWeek.length;
       const takeFoodBees = Math.ceil(orderOwners.length / LIMIT_ORDER);
-      //console.log('checkAvailabeUser: ', checkAvailabeUser);
-      //console.log('takeFoodBees: ', takeFoodBees);
 
       //pick bees not in week
       if (checkAvailabeUser > 0 && checkAvailabeUser <= takeFoodBees) {
         const beesNotInWeek = todayUser.filter(
           (u) => !kindBeesInWeek.includes(u),
         );
-        //console.log('beesNotInWeek: ', beesNotInWeek);
         todayKindBees.push(...beesNotInWeek);
-        totalOrders -= LIMIT_ORDER * checkAvailabeUser;
+        totalOrders -= LIMIT_ORDER * beesNotInWeek.length;
       }
 
-      do {
+      while (totalOrders > 0) {
         const beeStt = Math.floor(Math.random() * box.length + 1) - 1;
+        const username = box[beeStt];
 
         if (
-          !todayKindBees.includes(box[beeStt]) &&
+          !todayKindBees.includes(username) &&
           (kindBeesInWeek.length === 0 ||
             checkAvailabeUser < takeFoodBees ||
-            !kindBeesInWeek.includes(box[beeStt]))
+            !kindBeesInWeek.includes(username))
         ) {
-          todayKindBees.push(box[beeStt]);
+          todayKindBees.push(username);
 
           totalOrders -= LIMIT_ORDER;
         }
-      } while (totalOrders > 0 && totalOrders % LIMIT_ORDER > 0);
-
-      //console.log('kind bees: ', todayKindBees);
+      }
 
       const todayKindBeeUserNames = todayKindBees
         .map((item) => '@' + item)
@@ -982,7 +976,7 @@ const jobClean = new CronJob(
 
     const date = new Date().getDate();
 
-    if (date % 10 <= 2) {
+    if (date % 10 > 1 && date % 10 <= 3) {
       const kindBeesHistories = await getData(FILE_PATHS.BEES);
 
       if (kindBeesHistories.length > 1) {
