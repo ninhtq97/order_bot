@@ -10,12 +10,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "cron": "^3.1.7",
+    "cron": "^3.5.0",
     "date-fns": "^4.1.0",
-    "dotenv": "^16.4.5",
-    "node-telegram-bot-api": "^0.66.0"
+    "dotenv": "^16.4.7",
+    "node-telegram-bot-api": "^0.63.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7"
+    "nodemon": "^3.1.9"
+  },
+  "overrides": {
+    "tough-cookie": "4.1.3"
   }
 }
