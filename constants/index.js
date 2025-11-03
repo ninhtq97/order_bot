@@ -24,6 +24,7 @@ exports.KEY = {
   SET_PAYEE: /\/setpayee/,
   CANCEL: /\/cancel/i,
   UNPAID: /\/unpaid/i,
+  PAID: /\/paid/i,
   RANDOM: /\/random/i,
   RETURN_BOX: /\/returnbox/i,
 };

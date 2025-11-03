@@ -1,5 +1,6 @@
 const fs = require('fs/promises');
 const { FILE_PATHS } = require('../constants');
+const { format } = require('date-fns');
 
 exports.toOrderKey = (owner) =>
   `o:${owner}:${Math.round(Math.random() * Math.pow(10, 5))
@@ -41,7 +42,7 @@ exports.getKeyboardPayeeMembers = async () => {
   return undefined;
 };
 
-exports.getKeyboardOrders = async (initOrders) => {
+exports.getKeyboardOrders = async (initOrders, displayField = 'name') => {
   const orders = initOrders || (await this.getData(FILE_PATHS.ORDER));
   const orderOwners = Object.keys(orders);
 
@@ -50,10 +51,15 @@ exports.getKeyboardOrders = async (initOrders) => {
       ...orderOwners.map((key) => {
         const order = orders[key];
 
+        let textId = order[displayField];
+        if (!isNaN(new Date(textId).getTime())) {
+          textId = format(new Date(textId), 'dd/MM/yyyy');
+        }
+
         return [
           {
-            text: order.name,
-            callback_data: 'username',
+            text: textId,
+            callback_data: '#',
           },
           {
             text: `Đã gửi ${order.paid ? '✅' : '❌'}`,

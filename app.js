@@ -24,7 +24,15 @@ const {
 } = require('./utils');
 const CronJob = require('cron').CronJob;
 
-const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+const bot = new TelegramBot(BOT_TOKEN, {
+  polling: true,
+  request: {
+    agentOptions: {
+      keepAlive: true,
+      family: 4,
+    },
+  },
+});
 let hasNewOrder = false;
 let takeFood = process.env.AUTO_RANDOM === 'true';
 let returnBox = false;
@@ -119,12 +127,14 @@ bot.on('message', (msg) => {
     '/registerpayee',
     '/cancel',
     '/unpaid',
+    '/paid',
     '/random',
     '/returnbox',
   ];
 
   //validate order(s)
   const isNotCommand =
+    msg.text &&
     msg.text.startsWith('/') &&
     !commands.find((x) => msg.text.toLowerCase().startsWith(x));
 
@@ -223,18 +233,6 @@ bot.onText(KEY.ORDER, async (msg, match) => {
     returnBox = true;
   }
 
-  // const newOrders = match.input
-  //   .split(new RegExp(KEY.GET_ORDER))
-  //   .filter((o) => !!o.trim());
-  // for (const order of newOrders) {
-  //   orders[toOrderKey(msg.from.id)] = {
-  //     name: getName(msg.from),
-  //     text: order.trim(),
-  //     paid: false,
-  //     received: false,
-  //   };
-  // }
-
   await updateData(FILE_PATHS.ORDER, orders);
   hasNewOrder = true;
 });
@@ -275,8 +273,8 @@ bot.onText(KEY.CANCEL, async (msg, match) => {
 
   await updateData(FILE_PATHS.ORDER, orders);
 
-  bot.sendChatAction(GROUP_ID, 'typing');
-  bot.sendMessage(GROUP_ID, messageList[msStt], {
+  bot.sendChatAction(msg.chat.id, 'typing');
+  bot.sendMessage(msg.chat.id, messageList[msStt], {
     parse_mode: 'HTML',
   });
 
@@ -353,6 +351,59 @@ bot.onText(KEY.UNPAID, async (msg) => {
 
     bot.sendChatAction(msg.chat.id, 'typing');
     bot.sendMessage(msg.chat.id, message);
+  }
+});
+
+bot.onText(KEY.PAID, async (msg) => {
+  const config = await getData(FILE_PATHS.CONFIG);
+  if (msg.from.username !== config.payee.name) {
+    bot.sendChatAction(msg.chat.id, 'typing');
+    bot.sendMessage(msg.chat.id, 'Chức năng chỉ dành cho admin');
+    return;
+  }
+
+  // user send request
+  const username = msg.text.replace(KEY.PAID, '').trim();
+
+  if (!username) {
+    bot.sendChatAction(msg.chat.id, 'typing');
+    bot.sendMessage(msg.chat.id, 'Nhập <b>@username</b> đã thanh toán', {
+      parse_mode: 'HTML',
+    });
+    return;
+  }
+
+  const orders = await getData(FILE_PATHS.OLD);
+
+  if (Object.keys(orders).length) {
+    for (const owner in orders) {
+      if (orders[owner].name !== username) {
+        delete orders[owner];
+        continue;
+      }
+
+      orders[owner].paid && orders[owner].received && delete orders[owner];
+    }
+
+    const inlineKeyboard = await getKeyboardOrders(orders, 'date');
+
+    if (inlineKeyboard) {
+      bot.sendMessage(
+        msg.chat.id,
+        `Danh sách order của <b>${username}</b> chưa thanh toán`,
+        {
+          reply_markup: {
+            resize_keyboard: true,
+            inline_keyboard: inlineKeyboard,
+          },
+          parse_mode: 'HTML',
+        },
+      );
+      return;
+    }
+
+    bot.sendChatAction(msg.chat.id, 'typing');
+    bot.sendMessage(msg.chat.id, '**Không có dữ liệu**');
   }
 });
 
@@ -465,11 +516,6 @@ bot.on('edited_message', async (query) => {
   //accept order
   if (new RegExp(KEY.ORDER).test(query.text)) {
     const orders = await getData(FILE_PATHS.ORDER);
-    //const text = query.text.replace(REGEXP_REPLACE.ORDER, ' ').trim();
-
-    // orders[toOrderKey(query.from.id)] = orders[toOrderKey(query.from.id)] || {};
-    // orders[toOrderKey(query.from.id)].text = text;
-    // orders[toOrderKey(query.from.id)].name = getName(query.from);
 
     const text = query.text.trim();
     const keys = Object.keys(orders).filter((k) =>
@@ -580,7 +626,8 @@ bot.on('callback_query', async (query) => {
         !isEqual(
           startOfDay(new Date(query.message.date * 1000)),
           startOfDay(new Date()),
-        )
+        ) ||
+        query.message.chat.id != GROUP_ID
       ) {
         const orders = await getData(FILE_PATHS.OLD);
 
@@ -699,7 +746,7 @@ bot.on('callback_query', async (query) => {
 });
 
 const jobListOrder = new CronJob(
-  '*/2 10,11 * * 1-5',
+  '*/2 10,11 * * 1-6',
   async () => {
     if (hasNewOrder) {
       const orders = await getData(FILE_PATHS.ORDER);
@@ -727,19 +774,105 @@ const jobListOrder = new CronJob(
 );
 
 const jobOrder = new CronJob(
-  '10 10 * * 1-5',
+  '30 09 * * 1-5',
   async () => {
     bot.sendChatAction(GROUP_ID, 'typing');
-    bot.sendMessage(GROUP_ID, `Nhắc nhẹ: Order cơm thôi kẻo đói mn ơi 🍚🍚🍚`);
+    bot.sendMessage(GROUP_ID, `Nhắc nhẹ: Order cơm thôi, kẻo đói mn ơi 🍚🍚🍚`);
 
     const imagePath = './assets/images/photo_2023-12-29_10-17-26.jpg';
+    const imagePath2 = './assets/images/com_pho_menu.jpg';
 
-    if (existsSync(imagePath)) {
-      const imgBuf = await fs.readFile(imagePath);
-      bot.sendPhoto(GROUP_ID, imgBuf, {
-        caption:
-          'https://shopeefood.vn/ha-noi/com-pho-com-ga-com-bo-duong-khue',
-      });
+    if (existsSync(imagePath) && existsSync(imagePath2)) {
+      // bot.sendMediaGroup(GROUP_ID, [
+      //   { type: 'photo', media: imagePath },
+      //   { type: 'photo', media: imagePath2 },
+      // ]);
+    }
+  },
+  null,
+  true,
+  'Asia/Ho_Chi_Minh',
+);
+
+const jobReminder = new CronJob(
+  '10 17 * * 5',
+  async () => {
+    const olds = await getData(FILE_PATHS.OLD);
+    console.log('olds:', olds);
+
+    const orders = await getData(FILE_PATHS.ORDER);
+
+    for (const owner in orders) {
+      orders[owner].paid && orders[owner].received && delete orders[owner];
+    }
+    console.log('orders:', orders);
+
+    const aggregate = { ...olds, ...orders };
+
+    if (Object.keys(aggregate).length) {
+      const data = Object.values(aggregate).reduce((prev, cur) => {
+        if (!cur.received) {
+          if (prev[format(new Date(cur.date), 'dd/MM/yyyy')]) {
+            prev[format(new Date(cur.date), 'dd/MM/yyyy')].push(cur);
+          } else {
+            prev[format(new Date(cur.date), 'dd/MM/yyyy')] = [cur];
+          }
+        }
+
+        return prev;
+      }, {});
+
+      let tableMessage = '<b>BẢNG TỔNG HỢP</b>';
+      for (const date of Object.keys(data)) {
+        tableMessage = tableMessage.concat(`\n🗓 Ngày ${date}: `);
+
+        const orderInDate = data[date];
+        for (const i in orderInDate) {
+          tableMessage = tableMessage.concat(
+            `\n\t\t\t\t${+i + 1}. ${orderInDate[i].name}: ${
+              orderInDate[i].text
+            }`,
+          );
+        }
+      }
+
+      // không tìm kiếm thấy kết quả
+      if (!Object.keys(data).length) {
+        return;
+      }
+
+      console.log('aggregate:', aggregate);
+
+      const unpaid_persons = Object.values(aggregate)
+        .filter((o) => !o.received)
+        .reduce((prev, cur) => {
+          if (!prev.find((x) => x === cur.name)) {
+            prev.push(cur.name);
+          }
+
+          return prev;
+        }, []);
+
+      const taggedName = unpaid_persons.map((p) => '@' + p).join(', ');
+
+      let notificationList = [
+        `Sau khi tổng hợp số liệu tuần qua, MÈO <b>HAY QUÊN</b> phát hiện ra 🕵🏻‍♂️🕵🏻‍♂️ còn ${taggedName} chưa mang thóc về kho. Mọi người kiểm tra lại và mang thóc về cho chủ shop nhé.`,
+        `Ayza, mai đã là cuối tuần rùi!!! Hình như còn ${taggedName} chưa trả thóc cho chủ shop thì phải á 👨🏻‍🌾👨🏻‍🌾👨🏻‍🌾`,
+        `${taggedName} ơi... Mau mang thóc về cho chủ shop đi xay lấy gạo thổi cơm cho tuần sau nhé 👨🏻‍🍳👨🏻‍🍳👨🏻‍🍳`,
+      ];
+
+      notificationList = shuffle(notificationList);
+      const notiStt =
+        Math.floor(Math.random() * notificationList.length + 1) - 1;
+
+      bot.sendChatAction(GROUP_ID, 'typing');
+      bot.sendMessage(
+        GROUP_ID,
+        `${tableMessage} \n\n <i>${notificationList[notiStt]}</i>`,
+        {
+          parse_mode: 'HTML',
+        },
+      );
     }
   },
   null,
@@ -759,7 +892,7 @@ function shuffle(a) {
 }
 
 const jobTakeLunch = new CronJob(
-  '40 11 * * 1-5',
+  '40 11 * * 1-6',
   async function () {
     const orders = await getData(FILE_PATHS.ORDER);
     const orderOwners = Object.keys(orders);
@@ -828,7 +961,7 @@ const jobTakeLunch = new CronJob(
         .join(', ');
       const message = `<i>🗓Ngày mới lại tới, hôm nay MÈO <b>HAM ĂN</b> đã ngẫu nhiên chọn ra <b>${todayKindBeeUserNames}</b> là người đi lấy cơm giúp mọi người ${todayKindBees.map(
         (item) => '🐝',
-      )}\n🚩 Vị trí: khu vực bàn tròn tầng 1, túi có tên Khánh LĐT(để ý số suất cơm nhé)\n⏰ Thời gian: 11h 55'\n\t\t\t\t\t\t\t\t😍Cám ơn <b>${todayKindBeeUserNames}</b> rất nhiều 😍</i>`;
+      )}\n🚩 Vị trí: khu vực bàn lễ tân tầng 1(để ý số suất cơm nhé)\n⏰ Thời gian: 11h 55'\n\t\t\t\t\t\t\t\t😍Cám ơn <b>${todayKindBeeUserNames}</b> rất nhiều 😍</i>`;
 
       //update histories
       kindBeesHistories.push(todayKindBeeUserNames);
@@ -844,7 +977,7 @@ const jobTakeLunch = new CronJob(
 );
 
 const jobReturnBox = new CronJob(
-  '40 13 * * 1-5',
+  '40 13 * * 1-6',
   async function () {
     if (returnBox && takeFood) {
       const kindBeesHistories = await getData(FILE_PATHS.BEES);
@@ -853,9 +986,7 @@ const jobReturnBox = new CronJob(
 
       const message = `<i><b>${todayKindBees}</b> ơi, đừng quên trả lại hộp cơm cho nhà bếp nhé ${todayKindBees
         .split(',')
-        .map(
-          (item) => '🐝',
-        )}</i>\n(nếu không thấy người giao cơm có thể để gọn túi đồ vào 1 góc tầng 1)`;
+        .map((item) => '🐝')}</i>\n(Để gọn túi đồ vào góc sảnh tầng 1)`;
 
       bot.sendChatAction(GROUP_ID, 'typing');
       bot.sendMessage(GROUP_ID, message, { parse_mode: 'HTML' });
@@ -867,7 +998,7 @@ const jobReturnBox = new CronJob(
 );
 
 const jobAnnouncePayment = new CronJob(
-  '0 15 * * 1-5',
+  '0 15 * * 1-6',
   async function () {
     const config = await getData(FILE_PATHS.CONFIG);
     const inlineKeyboard = await getKeyboardOrders();
@@ -914,7 +1045,7 @@ const jobAnnouncePayment = new CronJob(
 );
 
 const jobReAnnouncePayment = new CronJob(
-  '0 17 * * 1-5',
+  '0 17 * * 1-6',
   async function () {
     const orders = await getData(FILE_PATHS.ORDER);
 
@@ -975,8 +1106,10 @@ const jobClean = new CronJob(
     returnBox = false;
 
     const date = new Date().getDate();
+    console.log('##DATE:', date);
+    const resetDate = +(process.env.RESET_DATE ?? '2');
 
-    if (date % 10 > 1 && date % 10 <= 3) {
+    if (date % 10 === resetDate || date % 10 === resetDate + 1) {
       const kindBeesHistories = await getData(FILE_PATHS.BEES);
 
       if (kindBeesHistories.length > 1) {
